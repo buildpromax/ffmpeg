@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       flavor:
-        description: '构建模式 (A=全功能 / B=精简)'
+        description: '构建模式 (full=全功能 / minimal=精简)'
         required: true
         default: 'full'
         type: choice
@@ -23,29 +23,46 @@ on:
       toolchain_source:
         description: '工具链来源'
         required: true
-        default: 'prebuilt'
+        default: 'github-release'
         type: choice
         options:
-          - prebuilt   # 下载预编译(快,首次约 30 秒)
-          - build      # 从源码编译(慢,首次约 15-20 分钟)
+          - github-release   # 从 GitHub Release 下载预编译(快,首次约 10-20 秒)
+          - build            # 从源码编译(慢,首次约 15-20 分钟)
 
-permissions:
-  contents: write
+env:
+  # FFmpeg 版本
+  FFMPEG_VERSION: "n8.1.2"
+  # 外部库版本（固定以保障可重现构建）
+  X264_TAG: "stable"
+  X265_TAG: "4.1"
+  OPUS_VERSION: "1.5.2"
+  VPX_TAG: "v1.14.1"
+  FDK_TAG: "v2.0.3"
+  LAME_VERSION: "3.100"
 
 jobs:
   build:
     name: 编译 ${{ github.event.inputs.flavor }} (${{ github.event.inputs.target_arch }})
     runs-on: ubuntu-latest
-    # 这里的 if 控制整个 job 是否跑 —— 但 workflow_dispatch 必须至少跑一个 job
-    # 所以用 matrix 配合下面的 if 步骤控制更细粒度
+    permissions:
+      contents: write
 
     steps:
+      # ============================================================
+      # Actions 版本检测记录 (2026-07-25):
+      #   actions/checkout@v4        → 最新 v7.0.1  (Node 24, 安全增强)
+      #   actions/cache@v4           → 最新 v6.1.0  (Node 24, ESM迁移)
+      #   actions/upload-artifact@v4 → 最新 v7.0.1  (Node 24, 新输出)
+      #   softprops/action-gh-release@v2 → 最新 v3.0.1 (Node 24)
+      # ============================================================
+
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: 设置架构变量
         id: arch
         run: |
+          set -euo pipefail
           case "${{ github.event.inputs.target_arch }}" in
             x86_64)
               echo "target=x86_64-linux-musl" >> $GITHUB_OUTPUT
@@ -53,9 +70,7 @@ jobs:
               echo "ffmpeg_arch=x86_64" >> $GITHUB_OUTPUT
               echo "cpu=x86-64" >> $GITHUB_OUTPUT
               echo "enable_x86asm=true" >> $GITHUB_OUTPUT
-              # musl.cc 官方预编译(richfelker 自己维护)
-              echo "prebuilt_url=https://musl.cc/x86_64-linux-musl-cross.tgz" >> $GITHUB_OUTPUT
-              echo "prebuilt_dir=x86_64-linux-musl-cross" >> $GITHUB_OUTPUT
+              echo "prebuilt_filename=x86_64-linux-musl.tar.xz" >> $GITHUB_OUTPUT
               ;;
             aarch64)
               echo "target=aarch64-linux-musl" >> $GITHUB_OUTPUT
@@ -63,82 +78,78 @@ jobs:
               echo "ffmpeg_arch=aarch64" >> $GITHUB_OUTPUT
               echo "cpu=armv8-a" >> $GITHUB_OUTPUT
               echo "enable_x86asm=false" >> $GITHUB_OUTPUT
-              echo "prebuilt_url=https://musl.cc/aarch64-linux-musl-cross.tgz" >> $GITHUB_OUTPUT
-              echo "prebuilt_dir=aarch64-linux-musl-cross" >> $GITHUB_OUTPUT
+              echo "prebuilt_filename=aarch64-linux-musl.tar.xz" >> $GITHUB_OUTPUT
               ;;
             armv7)
               echo "target=arm-linux-musleabihf" >> $GITHUB_OUTPUT
-              echo "musl_target=arm-linux-musleabihf" >> $GITHUB_OUTPUT
+              echo "musl_target=armv7l-linux-musleabihf" >> $GITHUB_OUTPUT
               echo "ffmpeg_arch=arm" >> $GITHUB_OUTPUT
               echo "cpu=armv7-a" >> $GITHUB_OUTPUT
               echo "enable_x86asm=false" >> $GITHUB_OUTPUT
-              echo "prebuilt_url=https://musl.cc/arm-linux-musleabihf-cross.tgz" >> $GITHUB_OUTPUT
-              echo "prebuilt_dir=arm-linux-musleabihf-cross" >> $GITHUB_OUTPUT
+              echo "prebuilt_filename=armv7l-linux-musleabihf.tar.xz" >> $GITHUB_OUTPUT
               ;;
           esac
           echo "模式: ${{ github.event.inputs.flavor }}, 架构: ${{ github.event.inputs.target_arch }}"
 
       - name: 安装基础依赖
         run: |
+          set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y \
-            build-essential bison flex texinfo gperf patch \
-            curl git nasm yasm cmake ninja-build pkg-config \
-            autoconf automake libtool python3 xz-utils \
-            xorriso
+          sudo apt-get install -y --no-install-recommends             build-essential bison flex texinfo gperf patch             curl git nasm yasm cmake ninja-build pkg-config             autoconf automake libtool python3 xz-utils
 
       - name: 缓存工具链与源码
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             toolchain
             ffmpeg-src
             ext-libs
-          key: ${{ runner.os }}-musl-${{ github.event.inputs.target_arch }}-${{ github.event.inputs.flavor }}-toolchain-${{ github.event.inputs.toolchain_source }}-v4
+          key: ${{ runner.os }}-musl-${{ github.event.inputs.target_arch }}-${{ github.event.inputs.flavor }}-${{ github.event.inputs.toolchain_source }}-ffmpeg-${{ env.FFMPEG_VERSION }}-v5
           restore-keys: |
             ${{ runner.os }}-musl-${{ github.event.inputs.target_arch }}-${{ github.event.inputs.flavor }}-
 
-      # ============ 工具链准备(分支) ============
-      - name: 下载预编译工具链
-        if: github.event.inputs.toolchain_source == 'prebuilt'
+      # ============ 工具链准备 ============
+      - name: 从 GitHub Release 下载预编译工具链
+        if: github.event.inputs.toolchain_source == 'github-release'
         run: |
+          set -euo pipefail
           mkdir -p toolchain
           cd toolchain
-          # musl.cc 的 .tgz 解压后是 bin/、lib/、x86_64-linux-musl/... 等
-          # 标记一下是否已经下载过
+
           MARKER="downloaded-${{ steps.arch.outputs.musl_target }}.marker"
-          if [ ! -f "$MARKER" ]; then
-            echo "下载预编译工具链..."
-            echo "URL: ${{ steps.arch.outputs.prebuilt_url }}"
-            wget "${{ steps.arch.outputs.prebuilt_url }}" -O toolchain.tgz
-            ls -lh toolchain.tgz
-            tar -xzf toolchain.tgz
-            rm toolchain.tgz
-            # 找一下工具链在哪
-            GCC_PATH=$(find . -name "${{ steps.arch.outputs.musl_target }}-gcc" -type f | head -1)
-            if [ -z "$GCC_PATH" ]; then
-              echo "::error::找不到 ${{ steps.arch.outputs.musl_target }}-gcc!"
-              echo "当前文件结构:"
-              find . -type f | head -20
-              exit 1
-            fi
+          if [ -f "$MARKER" ]; then
+            echo "使用缓存的工具链"
+          else
+            echo "从 GitHub Release 下载预编译工具链..."
+            URL="https://github.com/userdocs/qbt-musl-cross-make/releases/latest/download/${{ steps.arch.outputs.prebuilt_filename }}"
+            echo "下载地址: $URL"
+            curl -fSL "$URL" -o toolchain.tar.xz
+            ls -lh toolchain.tar.xz
+            tar -xf toolchain.tar.xz
+            rm toolchain.tar.xz
             touch "$MARKER"
             echo "✓ 下载并解压成功"
-          else
-            echo "使用缓存的工具链"
           fi
-          # 找到工具链 bin 目录
+
+          # 找到工具链 bin 目录（musl-cross-make 解压后目录名可能带 -cross 后缀也可能不带）
           GCC_PATH=$(find . -name "${{ steps.arch.outputs.musl_target }}-gcc" -type f | head -1)
+          if [ -z "$GCC_PATH" ]; then
+            echo "::error::找不到 ${{ steps.arch.outputs.musl_target }}-gcc!"
+            echo "当前目录结构:"
+            find . -maxdepth 3 -type d | head -30
+            exit 1
+          fi
           TOOLCHAIN_BIN=$(dirname "$GCC_PATH")
           echo "TOOLCHAIN_BIN=$TOOLCHAIN_BIN" >> $GITHUB_ENV
           echo "工具链 bin 目录: $TOOLCHAIN_BIN"
-          $TOOLCHAIN_BIN/${{ steps.arch.outputs.musl_target }}-gcc --version | head -1
+          "$TOOLCHAIN_BIN/${{ steps.arch.outputs.musl_target }}-gcc" --version | head -1
 
       - name: 从源码编译工具链 (慢但稳)
         if: github.event.inputs.toolchain_source == 'build'
         run: |
+          set -euo pipefail
           if [ ! -d "musl-cross-make" ]; then
-            git clone https://github.com/richfelker/musl-cross-make.git
+            git clone --depth 1 https://github.com/richfelker/musl-cross-make.git
           fi
           cd musl-cross-make
           cat > config.mak <<EOF
@@ -158,21 +169,14 @@ jobs:
           fi
           TOOLCHAIN_BIN=$PWD/../toolchain/bin
           echo "TOOLCHAIN_BIN=$TOOLCHAIN_BIN" >> $GITHUB_ENV
-          $TOOLCHAIN_BIN/${{ steps.arch.outputs.musl_target }}-gcc --version | head -1
+          "$TOOLCHAIN_BIN/${{ steps.arch.outputs.musl_target }}-gcc" --version | head -1
 
       # ============ ffmpeg 源码 ============
       - name: 克隆 FFmpeg
         run: |
+          set -euo pipefail
           if [ ! -d "ffmpeg-src" ]; then
-            # 8.1.2 修复了 CVE-2026-8461(8.8 分 RCE)
-            git clone --depth 1 --branch release/8.1 \
-              https://git.ffmpeg.org/ffmpeg.git ffmpeg-src
-            cd ffmpeg-src
-            git fetch --depth 1 origin tag n8.1.2 2>/dev/null || true
-            # 如果 n8.1.2 tag 拉下来了,checkout 过去
-            if git rev-parse n8.1.2 >/dev/null 2>&1; then
-              git checkout n8.1.2
-            fi
+            git clone --depth 1 --branch ${{ env.FFMPEG_VERSION }}               https://git.ffmpeg.org/ffmpeg.git ffmpeg-src
           fi
           cd ffmpeg-src && git log -1 --oneline
 
@@ -180,6 +184,7 @@ jobs:
       - name: 编译外部依赖库 (仅 full 模式)
         if: github.event.inputs.flavor == 'full'
         run: |
+          set -euo pipefail
           export PATH="$TOOLCHAIN_BIN:$PATH"
           export CC=${{ steps.arch.outputs.musl_target }}-gcc
           export CXX=${{ steps.arch.outputs.musl_target }}-g++
@@ -192,12 +197,12 @@ jobs:
           # x264
           if [ ! -f "$PREFIX/lib/libx264.a" ]; then
             echo "=== 编译 x264 ==="
-            [ -d x264 ] || git clone --depth 1 https://code.videolan.org/videolan/x264.git
+            if [ ! -d x264 ]; then
+              git clone --depth 1 --branch ${{ env.X264_TAG }} https://code.videolan.org/videolan/x264.git
+            fi
             cd x264
-            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }} \
-              --cross-prefix=${{ steps.arch.outputs.musl_target }}- \
-              --enable-static --disable-shared --disable-opencl --enable-pic
-            make -j$(nproc) >/dev/null 2>&1
+            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }}               --cross-prefix=${{ steps.arch.outputs.musl_target }}-               --enable-static --disable-shared --disable-opencl --enable-pic
+            make -j$(nproc)
             make install
             cd ..
           fi
@@ -205,16 +210,12 @@ jobs:
           # x265
           if [ ! -f "$PREFIX/lib/libx265.a" ]; then
             echo "=== 编译 x265 ==="
-            [ -d x265 ] || git clone --depth 1 https://bitbucket.org/multicoreware/x265_git.git x265
+            if [ ! -d x265 ]; then
+              git clone --depth 1 --branch ${{ env.X265_TAG }} https://bitbucket.org/multicoreware/x265_git.git x265
+            fi
             cd x265/build/linux
-            cmake -DCMAKE_INSTALL_PREFIX=$PREFIX \
-                  -DCMAKE_SYSTEM_NAME=Linux \
-                  -DCMAKE_SYSTEM_PROCESSOR=${{ github.event.inputs.target_arch }} \
-                  -DCMAKE_C_COMPILER=$CC \
-                  -DCMAKE_CXX_COMPILER=$CXX \
-                  -DENABLE_SHARED=OFF -DENABLE_CLI=OFF \
-                  ../../source 2>&1 | tail -5
-            make -j$(nproc) >/dev/null 2>&1
+            cmake -DCMAKE_INSTALL_PREFIX=$PREFIX                   -DCMAKE_SYSTEM_NAME=Linux                   -DCMAKE_SYSTEM_PROCESSOR=${{ github.event.inputs.target_arch }}                   -DCMAKE_C_COMPILER=$CC                   -DCMAKE_CXX_COMPILER=$CXX                   -DCMAKE_AR=$AR                   -DCMAKE_RANLIB=$RANLIB                   -DENABLE_SHARED=OFF -DENABLE_CLI=OFF                   ../../source 2>&1 | tail -10
+            make -j$(nproc)
             make install
             cd ../../..
           fi
@@ -222,11 +223,13 @@ jobs:
           # opus
           if [ ! -f "$PREFIX/lib/libopus.a" ]; then
             echo "=== 编译 opus ==="
-            [ -d opus ] || { curl -sL https://downloads.xiph.org/releases/opus/opus-1.5.2.tar.gz | tar -xz && mv opus-1.5.2 opus; }
+            if [ ! -d opus ]; then
+              curl -sL https://downloads.xiph.org/releases/opus/opus-${{ env.OPUS_VERSION }}.tar.gz | tar -xz
+              mv opus-${{ env.OPUS_VERSION }} opus
+            fi
             cd opus
-            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }} \
-              --enable-static --disable-shared --disable-doc
-            make -j$(nproc) >/dev/null 2>&1
+            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }}               --enable-static --disable-shared --disable-doc
+            make -j$(nproc)
             make install
             cd ..
           fi
@@ -234,14 +237,12 @@ jobs:
           # vpx
           if [ ! -f "$PREFIX/lib/libvpx.a" ]; then
             echo "=== 编译 vpx ==="
-            [ -d libvpx ] || git clone --depth 1 https://chromium.googlesource.com/webm/libvpx.git
+            if [ ! -d libvpx ]; then
+              git clone --depth 1 --branch ${{ env.VPX_TAG }} https://chromium.googlesource.com/webm/libvpx.git
+            fi
             cd libvpx
-            CROSS=${{ steps.arch.outputs.musl_target }}- \
-              ./configure --prefix=$PREFIX \
-                --disable-shared --enable-static \
-                --disable-unit-tests --disable-examples \
-                --disable-docs --enable-vp9-highbitdepth --enable-pic
-            make -j$(nproc) >/dev/null 2>&1
+            CROSS=${{ steps.arch.outputs.musl_target }}-               ./configure --prefix=$PREFIX                 --disable-shared --enable-static                 --disable-unit-tests --disable-examples                 --disable-docs --enable-vp9-highbitdepth --enable-pic
+            make -j$(nproc)
             make install
             cd ..
           fi
@@ -249,12 +250,13 @@ jobs:
           # fdk-aac
           if [ ! -f "$PREFIX/lib/libfdk-aac.a" ]; then
             echo "=== 编译 fdk-aac ==="
-            [ -d fdk-aac ] || git clone --depth 1 https://github.com/mstorsjo/fdk-aac.git
+            if [ ! -d fdk-aac ]; then
+              git clone --depth 1 --branch ${{ env.FDK_TAG }} https://github.com/mstorsjo/fdk-aac.git
+            fi
             cd fdk-aac
-            autoreconf -fiv >/dev/null 2>&1
-            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }} \
-              --enable-static --disable-shared
-            make -j$(nproc) >/dev/null 2>&1
+            autoreconf -fiv
+            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }}               --enable-static --disable-shared
+            make -j$(nproc)
             make install
             cd ..
           fi
@@ -262,29 +264,32 @@ jobs:
           # lame
           if [ ! -f "$PREFIX/lib/libmp3lame.a" ]; then
             echo "=== 编译 lame ==="
-            [ -d lame ] || { curl -sL https://downloads.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz | tar -xz && mv lame-3.100 lame; }
+            if [ ! -d lame ]; then
+              curl -sL https://downloads.sourceforge.net/project/lame/lame/${{ env.LAME_VERSION }}/lame-${{ env.LAME_VERSION }}.tar.gz | tar -xz
+              mv lame-${{ env.LAME_VERSION }} lame
+            fi
             cd lame
-            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }} \
-              --enable-static --disable-shared
-            make -j$(nproc) >/dev/null 2>&1
+            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }}               --enable-static --disable-shared
+            make -j$(nproc)
             make install
             cd ..
           fi
 
           echo "=== 外部库编译完成 ==="
-          ls $PREFIX/lib/*.a 2>/dev/null
+          ls -lh $PREFIX/lib/*.a 2>/dev/null || true
 
       # ============ 配置 ffmpeg ============
       - name: 配置 FFmpeg
         working-directory: ffmpeg-src
         run: |
+          set -euo pipefail
           export PATH="$TOOLCHAIN_BIN:$PATH"
           export CC=${{ steps.arch.outputs.musl_target }}-gcc
           export CXX=${{ steps.arch.outputs.musl_target }}-g++
           export AR=${{ steps.arch.outputs.musl_target }}-ar
           export NM=${{ steps.arch.outputs.musl_target }}-nm
 
-          BASE_FLAGS="--prefix=/workspace/ffmpeg-out
+          BASE_FLAGS="--prefix=${GITHUB_WORKSPACE}/ffmpeg-out
             --pkg-config-flags=--static
             --extra-cflags=-Os
             --extra-ldflags=-Wl,-s
@@ -309,8 +314,8 @@ jobs:
               --enable-libx264 --enable-libx265
               --enable-libvpx --enable-libopus
               --enable-libmp3lame --enable-libfdk-aac
-              --extra-cflags=-I$PWD/../ext-libs/include
-              --extra-ldflags=-L$PWD/../ext-libs/lib
+              --extra-cflags=-I${GITHUB_WORKSPACE}/ext-libs/include
+              --extra-ldflags=-L${GITHUB_WORKSPACE}/ext-libs/lib
               --enable-nonfree"
             echo "::warning::full 模式包含 nonfree fdk-aac"
           else
@@ -322,41 +327,71 @@ jobs:
       - name: 编译 FFmpeg
         working-directory: ffmpeg-src
         run: |
+          set -euo pipefail
           export PATH="$TOOLCHAIN_BIN:$PATH"
-          make -j$(nproc) 2>&1 | tail -20
+          make -j$(nproc) 2>&1 | tail -30
           make install
 
       # ============ 验证 ============
       - name: 验证静态二进制
         run: |
-          cd /workspace/ffmpeg-out/bin
+          set -euo pipefail
+          cd ${GITHUB_WORKSPACE}/ffmpeg-out/bin
           file ffmpeg
-          ldd ffmpeg 2>&1 || echo "✓ 无动态依赖"
+
+          # 严格的静态链接检查
+          if command -v ldd >/dev/null 2>&1; then
+            LDD_OUT=$(ldd ffmpeg 2>&1) || true
+            if echo "$LDD_OUT" | grep -qE "not a dynamic executable|statically linked"; then
+              echo "✓ 确认静态链接 (ldd)"
+            elif echo "$LDD_OUT" | grep -q "=>"; then
+              echo "::error::发现动态依赖!"
+              echo "$LDD_OUT"
+              exit 1
+            else
+              echo "::warning::ldd 输出异常，请人工检查:"
+              echo "$LDD_OUT"
+            fi
+          else
+            echo "::warning::ldd 不可用，跳过动态依赖检查"
+          fi
+
+          # readelf 二次确认
+          if command -v readelf >/dev/null 2>&1; then
+            INTERP=$(readelf -l ffmpeg 2>/dev/null | grep " interpreter" | awk '{print $NF}' || true)
+            if [ -n "$INTERP" ]; then
+              echo "::error::发现动态链接器: $INTERP"
+              exit 1
+            else
+              echo "✓ readelf 确认无动态链接器"
+            fi
+          fi
+
           ./ffmpeg -version 2>&1 | head -3
           ./ffprobe -version 2>&1 | head -3
           ls -lh ffmpeg ffprobe
-          ./ffmpeg -f lavfi -i "testsrc=duration=1:size=320x240:rate=10" \
-                   -f lavfi -i "sine=frequency=440:duration=1" \
-                   -c:v mpeg4 -c:a aac /tmp/test.mp4 -y 2>&1 | tail -5
+
+          ./ffmpeg -f lavfi -i "testsrc=duration=1:size=320x240:rate=10"                    -f lavfi -i "sine=frequency=440:duration=1"                    -c:v mpeg4 -c:a aac /tmp/test.mp4 -y 2>&1 | tail -5
           ls -lh /tmp/test.mp4
           ./ffprobe /tmp/test.mp4 2>&1 | head -10
 
       - name: 打包
         run: |
-          cd /workspace/ffmpeg-out/bin
+          set -euo pipefail
+          cd ${GITHUB_WORKSPACE}/ffmpeg-out/bin
           tar czf ffmpeg-${{ github.event.inputs.flavor }}-${{ github.event.inputs.target_arch }}-musl.tar.gz ffmpeg ffprobe
           ls -lh ffmpeg-${{ github.event.inputs.flavor }}-${{ github.event.inputs.target_arch }}-musl.tar.gz
 
       - name: 上传产物
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ffmpeg-${{ github.event.inputs.flavor }}-${{ github.event.inputs.target_arch }}-musl
-          path: ffmpeg-${{ github.event.inputs.flavor }}-${{ github.event.inputs.target_arch }}-musl.tar.gz
+          path: ffmpeg-out/bin/ffmpeg-${{ github.event.inputs.flavor }}-${{ github.event.inputs.target_arch }}-musl.tar.gz
           retention-days: 30
 
       - name: 发布到 Release (打 tag 时)
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
-          files: ffmpeg-${{ github.event.inputs.flavor }}-${{ github.event.inputs.target_arch }}-musl.tar.gz
+          files: ffmpeg-out/bin/ffmpeg-${{ github.event.inputs.flavor }}-${{ github.event.inputs.target_arch }}-musl.tar.gz
           generate_release_notes: true

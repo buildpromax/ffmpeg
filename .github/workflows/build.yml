@@ -110,7 +110,7 @@ jobs:
           if [ ! -f "$MARKER" ]; then
             echo "下载预编译工具链..."
             echo "URL: ${{ steps.arch.outputs.prebuilt_url }}"
-            curl -fSL "${{ steps.arch.outputs.prebuilt_url }}" -o toolchain.tgz
+            wget "${{ steps.arch.outputs.prebuilt_url }}" -O toolchain.tgz
             ls -lh toolchain.tgz
             tar -xzf toolchain.tgz
             rm toolchain.tgz

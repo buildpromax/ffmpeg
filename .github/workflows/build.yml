@@ -96,7 +96,7 @@ jobs:
             toolchain
             ffmpeg-src
             ext-libs
-          key: ${{ runner.os }}-musl-${{ github.event.inputs.target_arch }}-${{ github.event.inputs.flavor }}-${{ github.event.inputs.toolchain_source }}-ffmpeg-${{ env.FFMPEG_VERSION }}-v6
+          key: ${{ runner.os }}-musl-${{ github.event.inputs.target_arch }}-${{ github.event.inputs.flavor }}-${{ github.event.inputs.toolchain_source }}-ffmpeg-${{ env.FFMPEG_VERSION }}-v7
           restore-keys: |
             ${{ runner.os }}-musl-${{ github.event.inputs.target_arch }}-${{ github.event.inputs.flavor }}-
 
@@ -123,8 +123,8 @@ jobs:
             echo "✓ 下载并解压成功"
           fi
 
-          # 找到工具链 bin 目录
-          GCC_PATH=$(find . -name "${{ steps.arch.outputs.musl_target }}-gcc" -type f | head -1)
+          # 找到工具链 bin 目录，并转为绝对路径
+          GCC_PATH=$(find "$PWD" -name "${{ steps.arch.outputs.musl_target }}-gcc" -type f | head -1)
           if [ -z "$GCC_PATH" ]; then
             echo "::error::找不到 ${{ steps.arch.outputs.musl_target }}-gcc!"
             echo "当前目录结构:"
@@ -132,7 +132,9 @@ jobs:
             exit 1
           fi
           TOOLCHAIN_BIN=$(dirname "$GCC_PATH")
+          # 写绝对路径到 GITHUB_ENV，避免后续 working-directory 切换后相对路径失效
           echo "TOOLCHAIN_BIN=$TOOLCHAIN_BIN" >> $GITHUB_ENV
+          echo "TOOLCHAIN_ROOT=$(dirname "$TOOLCHAIN_BIN")" >> $GITHUB_ENV
           echo "工具链 bin 目录: $TOOLCHAIN_BIN"
           "$TOOLCHAIN_BIN/${{ steps.arch.outputs.musl_target }}-gcc" --version | head -1
 
@@ -161,6 +163,7 @@ jobs:
           fi
           TOOLCHAIN_BIN=$PWD/../toolchain/bin
           echo "TOOLCHAIN_BIN=$TOOLCHAIN_BIN" >> $GITHUB_ENV
+          echo "TOOLCHAIN_ROOT=$PWD/../toolchain" >> $GITHUB_ENV
           "$TOOLCHAIN_BIN/${{ steps.arch.outputs.musl_target }}-gcc" --version | head -1
 
       # ============ ffmpeg 源码 ============
@@ -168,7 +171,6 @@ jobs:
         run: |
           set -euo pipefail
           if [ ! -d "ffmpeg-src" ]; then
-            # n8.1.2 是 annotated tag，--depth 1 --branch 会警告，先 clone 分支再 checkout tag
             git clone --depth 1 --branch release/8.1               https://git.ffmpeg.org/ffmpeg.git ffmpeg-src
             cd ffmpeg-src
             git fetch --depth 1 origin tag ${{ env.FFMPEG_VERSION }}
@@ -286,10 +288,13 @@ jobs:
           export CXX=${{ steps.arch.outputs.musl_target }}-g++
           export AR=${{ steps.arch.outputs.musl_target }}-ar
           export NM=${{ steps.arch.outputs.musl_target }}-nm
+          export STRIP=${{ steps.arch.outputs.musl_target }}-strip
 
-          # 注意: --extra-libs 的值必须用引号包裹，否则空格会被 configure 解析为独立选项
           BASE_FLAGS=(
             "--prefix=${GITHUB_WORKSPACE}/ffmpeg-out"
+            "--enable-cross-compile"
+            "--cross-prefix=${{ steps.arch.outputs.musl_target }}-"
+            "--sysroot=${TOOLCHAIN_ROOT}"
             "--pkg-config-flags=--static"
             "--extra-cflags=-Os"
             "--extra-ldflags=-Wl,-s"

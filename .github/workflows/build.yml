@@ -96,7 +96,7 @@ jobs:
             toolchain
             ffmpeg-src
             ext-libs
-          key: ${{ runner.os }}-musl-${{ github.event.inputs.target_arch }}-${{ github.event.inputs.flavor }}-${{ github.event.inputs.toolchain_source }}-ffmpeg-${{ env.FFMPEG_VERSION }}-v5
+          key: ${{ runner.os }}-musl-${{ github.event.inputs.target_arch }}-${{ github.event.inputs.flavor }}-${{ github.event.inputs.toolchain_source }}-ffmpeg-${{ env.FFMPEG_VERSION }}-v6
           restore-keys: |
             ${{ runner.os }}-musl-${{ github.event.inputs.target_arch }}-${{ github.event.inputs.flavor }}-
 
@@ -136,18 +136,6 @@ jobs:
           echo "工具链 bin 目录: $TOOLCHAIN_BIN"
           "$TOOLCHAIN_BIN/${{ steps.arch.outputs.musl_target }}-gcc" --version | head -1
 
-          # 打印工具链组件版本（来自 releases 的 versions.json）
-          echo ""
-          echo "=== 工具链组件版本 ==="
-          echo "GCC:    16.1.0"
-          echo "Binutils: 2.46.1"
-          echo "musl:   b306b16af15c"
-          echo "GMP:    6.3.0"
-          echo "MPC:    1.3.1"
-          echo "MPFR:   4.2.2"
-          echo "Linux headers: 7.1.4"
-          echo "======================="
-
       - name: 从源码编译工具链 (慢但稳)
         if: github.event.inputs.toolchain_source == 'build'
         run: |
@@ -180,9 +168,15 @@ jobs:
         run: |
           set -euo pipefail
           if [ ! -d "ffmpeg-src" ]; then
-            git clone --depth 1 --branch ${{ env.FFMPEG_VERSION }}               https://git.ffmpeg.org/ffmpeg.git ffmpeg-src
+            # n8.1.2 是 annotated tag，--depth 1 --branch 会警告，先 clone 分支再 checkout tag
+            git clone --depth 1 --branch release/8.1               https://git.ffmpeg.org/ffmpeg.git ffmpeg-src
+            cd ffmpeg-src
+            git fetch --depth 1 origin tag ${{ env.FFMPEG_VERSION }}
+            git checkout ${{ env.FFMPEG_VERSION }}
+          else
+            cd ffmpeg-src
           fi
-          cd ffmpeg-src && git log -1 --oneline
+          git log -1 --oneline
 
       # ============ full 模式:编译外部库 ============
       - name: 编译外部依赖库 (仅 full 模式)
@@ -293,40 +287,52 @@ jobs:
           export AR=${{ steps.arch.outputs.musl_target }}-ar
           export NM=${{ steps.arch.outputs.musl_target }}-nm
 
-          BASE_FLAGS="--prefix=${GITHUB_WORKSPACE}/ffmpeg-out
-            --pkg-config-flags=--static
-            --extra-cflags=-Os
-            --extra-ldflags=-Wl,-s
-            --extra-libs=-lpthread\ -lm
-            --enable-static --disable-shared
-            --enable-pic --enable-pthreads
-            --enable-runtime-cpudetect
-            --arch=${{ steps.arch.outputs.ffmpeg_arch }}
-            --cpu=${{ steps.arch.outputs.cpu }}
-            --target-os=linux
-            --disable-doc --disable-ffplay
-            --disable-decoder=magicyuv"
+          # 注意: --extra-libs 的值必须用引号包裹，否则空格会被 configure 解析为独立选项
+          BASE_FLAGS=(
+            "--prefix=${GITHUB_WORKSPACE}/ffmpeg-out"
+            "--pkg-config-flags=--static"
+            "--extra-cflags=-Os"
+            "--extra-ldflags=-Wl,-s"
+            "--extra-libs=-lpthread -lm"
+            "--enable-static"
+            "--disable-shared"
+            "--enable-pic"
+            "--enable-pthreads"
+            "--enable-runtime-cpudetect"
+            "--arch=${{ steps.arch.outputs.ffmpeg_arch }}"
+            "--cpu=${{ steps.arch.outputs.cpu }}"
+            "--target-os=linux"
+            "--disable-doc"
+            "--disable-ffplay"
+            "--disable-decoder=magicyuv"
+          )
 
           if [ "${{ steps.arch.outputs.enable_x86asm }}" = "true" ]; then
-            BASE_FLAGS="$BASE_FLAGS --enable-x86asm"
+            BASE_FLAGS+=("--enable-x86asm")
           else
-            BASE_FLAGS="$BASE_FLAGS --disable-x86asm --enable-neon --enable-vfp"
+            BASE_FLAGS+=("--disable-x86asm" "--enable-neon" "--enable-vfp")
           fi
 
           if [ "${{ github.event.inputs.flavor }}" = "full" ]; then
-            FLAVOR_FLAGS="--enable-gpl --enable-version3
-              --enable-libx264 --enable-libx265
-              --enable-libvpx --enable-libopus
-              --enable-libmp3lame --enable-libfdk-aac
-              --extra-cflags=-I${GITHUB_WORKSPACE}/ext-libs/include
-              --extra-ldflags=-L${GITHUB_WORKSPACE}/ext-libs/lib
-              --enable-nonfree"
+            FLAVOR_FLAGS=(
+              "--enable-gpl"
+              "--enable-version3"
+              "--enable-libx264"
+              "--enable-libx265"
+              "--enable-libvpx"
+              "--enable-libopus"
+              "--enable-libmp3lame"
+              "--enable-libfdk-aac"
+              "--extra-cflags=-I${GITHUB_WORKSPACE}/ext-libs/include"
+              "--extra-ldflags=-L${GITHUB_WORKSPACE}/ext-libs/lib"
+              "--enable-nonfree"
+            )
             echo "::warning::full 模式包含 nonfree fdk-aac"
           else
-            FLAVOR_FLAGS="--enable-gpl --disable-nonfree"
+            FLAVOR_FLAGS=("--enable-gpl" "--disable-nonfree")
           fi
 
-          ./configure $BASE_FLAGS $FLAVOR_FLAGS
+          ./configure "${BASE_FLAGS[@]}" "${FLAVOR_FLAGS[@]}"
 
       - name: 编译 FFmpeg
         working-directory: ffmpeg-src

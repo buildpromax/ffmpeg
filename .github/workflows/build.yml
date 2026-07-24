@@ -1,0 +1,368 @@
+name: 编译 FFmpeg musl 静态版本
+
+# 触发方式:仅手动触发
+on:
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: '构建模式 (A=全功能 / B=精简)'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+          - full      # A: 全功能,带 x264/x265/aac 等外部库
+          - minimal   # B: 精简,只用 ffmpeg 内置 codec
+      target_arch:
+        description: '目标架构'
+        required: true
+        default: 'x86_64'
+        type: choice
+        options:
+          - x86_64
+          - aarch64
+          - armv7
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: 编译 ${{ matrix.flavor }} (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - flavor: full
+            arch: x86_64
+          - flavor: full
+            arch: aarch64
+          - flavor: full
+            arch: armv7
+          - flavor: minimal
+            arch: x86_64
+          - flavor: minimal
+            arch: aarch64
+          - flavor: minimal
+            arch: armv7
+
+    steps:
+      - name: 读取参数
+        id: inputs
+        run: |
+          echo "flavor=${{ github.event.inputs.flavor }}" >> $GITHUB_OUTPUT
+          echo "arch=${{ github.event.inputs.target_arch }}" >> $GITHUB_OUTPUT
+
+      - name: 过滤矩阵
+        run: |
+          if [ "${{ matrix.flavor }}" != "${{ steps.inputs.outputs.flavor }}" ] || \
+             [ "${{ matrix.arch }}" != "${{ steps.inputs.outputs.arch }}" ]; then
+            echo "should_skip=true" >> $GITHUB_ENV
+          else
+            echo "should_skip=false" >> $GITHUB_ENV
+          fi
+
+      - name: 检出代码
+        if: env.should_skip != 'true'
+        uses: actions/checkout@v4
+
+      - name: 设置架构变量
+        if: env.should_skip != 'true'
+        id: arch
+        run: |
+          case "${{ matrix.arch }}" in
+            x86_64)
+              echo "target=x86_64-linux-musl" >> $GITHUB_OUTPUT
+              echo "musl_target=x86_64-linux-musl" >> $GITHUB_OUTPUT
+              echo "ffmpeg_arch=x86_64" >> $GITHUB_OUTPUT
+              echo "cpu=x86-64" >> $GITHUB_OUTPUT
+              echo "enable_x86asm=true" >> $GITHUB_OUTPUT
+              ;;
+            aarch64)
+              echo "target=aarch64-linux-musl" >> $GITHUB_OUTPUT
+              echo "musl_target=aarch64-linux-musl" >> $GITHUB_OUTPUT
+              echo "ffmpeg_arch=aarch64" >> $GITHUB_OUTPUT
+              echo "cpu=armv8-a" >> $GITHUB_OUTPUT
+              echo "enable_x86asm=false" >> $GITHUB_OUTPUT
+              ;;
+            armv7)
+              echo "target=arm-linux-musleabihf" >> $GITHUB_OUTPUT
+              echo "musl_target=arm-linux-musleabihf" >> $GITHUB_OUTPUT
+              echo "ffmpeg_arch=arm" >> $GITHUB_OUTPUT
+              echo "cpu=armv7-a" >> $GITHUB_OUTPUT
+              echo "enable_x86asm=false" >> $GITHUB_OUTPUT
+              ;;
+          esac
+          echo "模式: ${{ matrix.flavor }}, 架构: ${{ matrix.arch }}"
+
+      - name: 缓存
+        if: env.should_skip != 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            musl-cross-make/output
+            ffmpeg-src
+            ext-libs
+          key: ${{ runner.os }}-musl-${{ matrix.arch }}-${{ matrix.flavor }}-v3
+          restore-keys: |
+            ${{ runner.os }}-musl-${{ matrix.arch }}-${{ matrix.flavor }}-
+
+      - name: 安装编译依赖
+        if: env.should_skip != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential bison flex texinfo gperf patch \
+            curl git nasm yasm cmake ninja-build pkg-config \
+            autoconf automake libtool python3 xz-utils
+
+      # ============= 1. musl 工具链 =============
+      - name: 编译 musl 工具链
+        if: env.should_skip != 'true'
+        run: |
+          if [ ! -d "musl-cross-make" ]; then
+            git clone https://github.com/richfelker/musl-cross-make.git
+          fi
+          cd musl-cross-make
+          cat > config.mak <<EOF
+          TARGET = ${{ steps.arch.outputs.target }}
+          OUTPUT = \$PWD/output
+          COMMON_CONFIG += --enable-static --disable-shared
+          GCC_CONFIG += --disable-gold --disable-lto
+          MUSL_CONFIG += --enable-optimize
+          EOF
+          if [ ! -f "output/bin/${{ steps.arch.outputs.musl_target }}-gcc" ]; then
+            echo "正在编译 musl 工具链 (${{ steps.arch.outputs.target }})..."
+            make -j$(nproc) 2>&1 | tail -100
+            make install
+          else
+            echo "使用缓存的工具链"
+          fi
+          output/bin/${{ steps.arch.outputs.musl_target }}-gcc --version | head -1
+
+      # ============= 2. ffmpeg 源码 =============
+      - name: 克隆 FFmpeg
+        if: env.should_skip != 'true'
+        run: |
+          if [ ! -d "ffmpeg-src" ]; then
+            # 8.1.2 修复了 CVE-2026-8461(8.8 分 RCE,MagicYUV 堆越界写)
+            # 千万不要用 8.1.0/8.1.1
+            git clone --depth 1 --branch release/8.1 \
+              https://git.ffmpeg.org/ffmpeg.git ffmpeg-src
+            cd ffmpeg-src
+            git fetch --depth 1 origin tag n8.1.2 2>/dev/null || true
+          fi
+          cd ffmpeg-src && git log -1 --oneline
+
+      # ============= 3. (full)编译外部库 =============
+      - name: 编译外部依赖库 (仅 full 模式)
+        if: env.should_skip != 'true' && matrix.flavor == 'full'
+        run: |
+          export PATH="$PWD/../musl-cross-make/output/bin:$PATH"
+          export CC=${{ steps.arch.outputs.musl_target }}-gcc
+          export CXX=${{ steps.arch.outputs.musl_target }}-g++
+          export AR=${{ steps.arch.outputs.musl_target }}-ar
+          export RANLIB=${{ steps.arch.outputs.musl_target }}-ranlib
+          export STRIP=${{ steps.arch.outputs.musl_target }}-strip
+          export PREFIX=$PWD/../ext-libs
+          mkdir -p $PREFIX
+
+          # x264
+          if [ ! -f "$PREFIX/lib/libx264.a" ]; then
+            echo "=== 编译 x264 ==="
+            if [ ! -d "x264" ]; then
+              git clone --depth 1 https://code.videolan.org/videolan/x264.git
+            fi
+            cd x264
+            ./configure \
+              --prefix=$PREFIX \
+              --host=${{ steps.arch.outputs.musl_target }} \
+              --cross-prefix=${{ steps.arch.outputs.musl_target }}- \
+              --enable-static --disable-shared \
+              --disable-opencl --enable-pic
+            make -j$(nproc) >/dev/null 2>&1
+            make install
+            cd ..
+          fi
+
+          # x265
+          if [ ! -f "$PREFIX/lib/libx265.a" ]; then
+            echo "=== 编译 x265 ==="
+            if [ ! -d "x265" ]; then
+              git clone --depth 1 https://bitbucket.org/multicoreware/x265_git.git x265
+            fi
+            cd x265/build/linux
+            cmake -DCMAKE_INSTALL_PREFIX=$PREFIX \
+                  -DCMAKE_SYSTEM_NAME=Linux \
+                  -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} \
+                  -DCMAKE_C_COMPILER=$CC \
+                  -DCMAKE_CXX_COMPILER=$CXX \
+                  -DENABLE_SHARED=OFF -DENABLE_CLI=OFF \
+                  ../../source 2>&1 | tail -5
+            make -j$(nproc) >/dev/null 2>&1
+            make install
+            cd ../../..
+          fi
+
+          # opus
+          if [ ! -f "$PREFIX/lib/libopus.a" ]; then
+            echo "=== 编译 opus ==="
+            if [ ! -d "opus" ]; then
+              curl -sL https://downloads.xiph.org/releases/opus/opus-1.5.2.tar.gz | tar -xz
+              mv opus-1.5.2 opus
+            fi
+            cd opus
+            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }} \
+              --enable-static --disable-shared --disable-doc
+            make -j$(nproc) >/dev/null 2>&1
+            make install
+            cd ..
+          fi
+
+          # vpx
+          if [ ! -f "$PREFIX/lib/libvpx.a" ]; then
+            echo "=== 编译 vpx ==="
+            if [ ! -d "libvpx" ]; then
+              git clone --depth 1 https://chromium.googlesource.com/webm/libvpx.git
+            fi
+            cd libvpx
+            CROSS=${{ steps.arch.outputs.musl_target }}- \
+              ./configure --prefix=$PREFIX \
+                --disable-shared --enable-static \
+                --disable-unit-tests --disable-examples \
+                --disable-docs --enable-vp9-highbitdepth \
+                --enable-pic
+            make -j$(nproc) >/dev/null 2>&1
+            make install
+            cd ..
+          fi
+
+          # fdk-aac (nonfree)
+          if [ ! -f "$PREFIX/lib/libfdk-aac.a" ]; then
+            echo "=== 编译 fdk-aac ==="
+            if [ ! -d "fdk-aac" ]; then
+              git clone --depth 1 https://github.com/mstorsjo/fdk-aac.git
+            fi
+            cd fdk-aac
+            autoreconf -fiv >/dev/null 2>&1
+            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }} \
+              --enable-static --disable-shared
+            make -j$(nproc) >/dev/null 2>&1
+            make install
+            cd ..
+          fi
+
+          # lame
+          if [ ! -f "$PREFIX/lib/libmp3lame.a" ]; then
+            echo "=== 编译 lame ==="
+            if [ ! -d "lame" ]; then
+              curl -sL https://downloads.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz | tar -xz
+              mv lame-3.100 lame
+            fi
+            cd lame
+            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }} \
+              --enable-static --disable-shared
+            make -j$(nproc) >/dev/null 2>&1
+            make install
+            cd ..
+          fi
+
+          echo "=== 所有外部库编译完成 ==="
+          ls $PREFIX/lib/*.a 2>/dev/null
+
+      # ============= 4. configure ffmpeg =============
+      - name: 配置 FFmpeg
+        if: env.should_skip != 'true'
+        working-directory: ffmpeg-src
+        run: |
+          export PATH="$PWD/../musl-cross-make/output/bin:$PATH"
+          export CC=${{ steps.arch.outputs.musl_target }}-gcc
+          export CXX=${{ steps.arch.outputs.musl_target }}-g++
+          export AR=${{ steps.arch.outputs.musl_target }}-ar
+          export NM=${{ steps.arch.outputs.musl_target }}-nm
+
+          BASE_FLAGS="--prefix=/workspace/ffmpeg-out
+            --pkg-config-flags=--static
+            --extra-cflags=-Os
+            --extra-ldflags=-Wl,-s
+            --extra-libs=-lpthread\ -lm
+            --enable-static --disable-shared
+            --enable-pic --enable-pthreads
+            --enable-runtime-cpudetect
+            --arch=${{ steps.arch.outputs.ffmpeg_arch }}
+            --cpu=${{ steps.arch.outputs.cpu }}
+            --target-os=linux
+            --disable-doc
+            --disable-ffplay"
+
+          if [ "${{ steps.arch.outputs.enable_x86asm }}" = "true" ]; then
+            BASE_FLAGS="$BASE_FLAGS --enable-x86asm"
+          else
+            BASE_FLAGS="$BASE_FLAGS --disable-x86asm"
+            BASE_FLAGS="$BASE_FLAGS --enable-neon --enable-vfp --enable-armv6 --enable-armv6t2"
+          fi
+
+          if [ "${{ matrix.flavor }}" = "full" ]; then
+            FLAVOR_FLAGS="--enable-gpl --enable-version3
+              --enable-libx264 --enable-libx265
+              --enable-libvpx --enable-libopus
+              --enable-libmp3lame --enable-libfdk-aac
+              --extra-cflags=-I$PWD/../ext-libs/include
+              --extra-ldflags=-L$PWD/../ext-libs/lib
+              --enable-nonfree
+              --disable-decoder=magicyuv"
+            echo "::warning::full 模式包含 nonfree 的 fdk-aac"
+          else
+            FLAVOR_FLAGS="--enable-gpl
+              --disable-nonfree
+              --disable-decoder=magicyuv"
+          fi
+
+          ./configure $BASE_FLAGS $FLAVOR_FLAGS
+
+      - name: 编译 FFmpeg
+        if: env.should_skip != 'true'
+        working-directory: ffmpeg-src
+        run: |
+          export PATH="$PWD/../musl-cross-make/output/bin:$PATH"
+          make -j$(nproc) 2>&1 | tail -20
+          make install
+
+      # ============= 5. 验证 =============
+      - name: 验证静态二进制
+        if: env.should_skip != 'true'
+        run: |
+          cd /workspace/ffmpeg-out/bin
+          file ffmpeg
+          ldd ffmpeg 2>&1 || echo "✓ 无动态依赖"
+          ./ffmpeg -version 2>&1 | head -3
+          ./ffprobe -version 2>&1 | head -3
+          ls -lh ffmpeg ffprobe
+          ./ffmpeg -f lavfi -i "testsrc=duration=1:size=320x240:rate=10" \
+                   -f lavfi -i "sine=frequency=440:duration=1" \
+                   -c:v mpeg4 -c:a aac /tmp/test.mp4 -y 2>&1 | tail -5
+          ls -lh /tmp/test.mp4
+          ./ffprobe /tmp/test.mp4 2>&1 | head -10
+
+      - name: 打包
+        if: env.should_skip != 'true'
+        run: |
+          cd /workspace/ffmpeg-out/bin
+          tar czf ffmpeg-${{ matrix.flavor }}-${{ matrix.arch }}-musl.tar.gz ffmpeg ffprobe
+          ls -lh ffmpeg-${{ matrix.flavor }}-${{ matrix.arch }}-musl.tar.gz
+
+      - name: 上传产物
+        if: env.should_skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-${{ matrix.flavor }}-${{ matrix.arch }}-musl
+          path: ffmpeg-${{ matrix.flavor }}-${{ matrix.arch }}-musl.tar.gz
+          retention-days: 30
+
+      - name: 发布到 Release (打 tag 时)
+        if: startsWith(github.ref, 'refs/tags/') && env.should_skip != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ffmpeg-${{ matrix.flavor }}-${{ matrix.arch }}-musl.tar.gz
+          generate_release_notes: true

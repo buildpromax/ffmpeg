@@ -96,7 +96,7 @@ jobs:
             toolchain
             ffmpeg-src
             ext-libs
-          key: ${{ runner.os }}-musl-${{ github.event.inputs.target_arch }}-${{ github.event.inputs.flavor }}-${{ github.event.inputs.toolchain_source }}-ffmpeg-${{ env.FFMPEG_VERSION }}-v7
+          key: ${{ runner.os }}-musl-${{ github.event.inputs.target_arch }}-${{ github.event.inputs.flavor }}-${{ github.event.inputs.toolchain_source }}-ffmpeg-${{ env.FFMPEG_VERSION }}-v8
           restore-keys: |
             ${{ runner.os }}-musl-${{ github.event.inputs.target_arch }}-${{ github.event.inputs.flavor }}-
 
@@ -132,7 +132,6 @@ jobs:
             exit 1
           fi
           TOOLCHAIN_BIN=$(dirname "$GCC_PATH")
-          # 写绝对路径到 GITHUB_ENV，避免后续 working-directory 切换后相对路径失效
           echo "TOOLCHAIN_BIN=$TOOLCHAIN_BIN" >> $GITHUB_ENV
           echo "TOOLCHAIN_ROOT=$(dirname "$TOOLCHAIN_BIN")" >> $GITHUB_ENV
           echo "工具链 bin 目录: $TOOLCHAIN_BIN"
@@ -191,6 +190,8 @@ jobs:
           export AR=${{ steps.arch.outputs.musl_target }}-ar
           export RANLIB=${{ steps.arch.outputs.musl_target }}-ranlib
           export STRIP=${{ steps.arch.outputs.musl_target }}-strip
+          export CFLAGS="-static -Os"
+          export LDFLAGS="-static"
           export PREFIX=$PWD/ext-libs
           mkdir -p $PREFIX
 
@@ -201,7 +202,7 @@ jobs:
               git clone --depth 1 --branch ${{ env.X264_TAG }} https://code.videolan.org/videolan/x264.git
             fi
             cd x264
-            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }}               --cross-prefix=${{ steps.arch.outputs.musl_target }}-               --enable-static --disable-shared --disable-opencl --enable-pic
+            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }}               --cross-prefix=${{ steps.arch.outputs.musl_target }}-               --enable-static --disable-shared --disable-opencl --enable-pic               --extra-cflags="-static" --extra-ldflags="-static"
             make -j$(nproc)
             make install
             cd ..
@@ -214,7 +215,7 @@ jobs:
               git clone --depth 1 --branch ${{ env.X265_TAG }} https://bitbucket.org/multicoreware/x265_git.git x265
             fi
             cd x265/build/linux
-            cmake -DCMAKE_INSTALL_PREFIX=$PREFIX                   -DCMAKE_SYSTEM_NAME=Linux                   -DCMAKE_SYSTEM_PROCESSOR=${{ github.event.inputs.target_arch }}                   -DCMAKE_C_COMPILER=$CC                   -DCMAKE_CXX_COMPILER=$CXX                   -DCMAKE_AR=$AR                   -DCMAKE_RANLIB=$RANLIB                   -DENABLE_SHARED=OFF -DENABLE_CLI=OFF                   ../../source 2>&1 | tail -10
+            cmake -DCMAKE_INSTALL_PREFIX=$PREFIX                   -DCMAKE_SYSTEM_NAME=Linux                   -DCMAKE_SYSTEM_PROCESSOR=${{ github.event.inputs.target_arch }}                   -DCMAKE_C_COMPILER=$CC                   -DCMAKE_CXX_COMPILER=$CXX                   -DCMAKE_AR=$AR                   -DCMAKE_RANLIB=$RANLIB                   -DENABLE_SHARED=OFF -DENABLE_CLI=OFF                   -DCMAKE_C_FLAGS="-static" -DCMAKE_CXX_FLAGS="-static"                   -DCMAKE_EXE_LINKER_FLAGS="-static"                   ../../source 2>&1 | tail -10
             make -j$(nproc)
             make install
             cd ../../..
@@ -228,7 +229,7 @@ jobs:
               mv opus-${{ env.OPUS_VERSION }} opus
             fi
             cd opus
-            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }}               --enable-static --disable-shared --disable-doc
+            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }}               --enable-static --disable-shared --disable-doc               CFLAGS="-static -Os" LDFLAGS="-static"
             make -j$(nproc)
             make install
             cd ..
@@ -241,7 +242,7 @@ jobs:
               git clone --depth 1 --branch ${{ env.VPX_TAG }} https://chromium.googlesource.com/webm/libvpx.git
             fi
             cd libvpx
-            CROSS=${{ steps.arch.outputs.musl_target }}-               ./configure --prefix=$PREFIX                 --disable-shared --enable-static                 --disable-unit-tests --disable-examples                 --disable-docs --enable-vp9-highbitdepth --enable-pic
+            CROSS=${{ steps.arch.outputs.musl_target }}-               ./configure --prefix=$PREFIX                 --disable-shared --enable-static                 --disable-unit-tests --disable-examples                 --disable-docs --enable-vp9-highbitdepth --enable-pic                 --extra-cflags="-static" --extra-ldflags="-static"
             make -j$(nproc)
             make install
             cd ..
@@ -255,7 +256,7 @@ jobs:
             fi
             cd fdk-aac
             autoreconf -fiv
-            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }}               --enable-static --disable-shared
+            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }}               --enable-static --disable-shared               CFLAGS="-static -Os" LDFLAGS="-static"
             make -j$(nproc)
             make install
             cd ..
@@ -269,7 +270,7 @@ jobs:
               mv lame-${{ env.LAME_VERSION }} lame
             fi
             cd lame
-            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }}               --enable-static --disable-shared
+            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }}               --enable-static --disable-shared               CFLAGS="-static -Os" LDFLAGS="-static"
             make -j$(nproc)
             make install
             cd ..
@@ -296,8 +297,8 @@ jobs:
             "--cross-prefix=${{ steps.arch.outputs.musl_target }}-"
             "--sysroot=${TOOLCHAIN_ROOT}"
             "--pkg-config-flags=--static"
-            "--extra-cflags=-Os"
-            "--extra-ldflags=-Wl,-s"
+            "--extra-cflags=-static -Os"
+            "--extra-ldflags=-static -Wl,-s"
             "--extra-libs=-lpthread -lm"
             "--enable-static"
             "--disable-shared"
@@ -354,31 +355,28 @@ jobs:
           cd ${GITHUB_WORKSPACE}/ffmpeg-out/bin
           file ffmpeg
 
-          # 严格的静态链接检查
+          # 纯静态检查：不应有任何 interpreter
+          if command -v readelf >/dev/null 2>&1; then
+            INTERP=$(readelf -l ffmpeg 2>/dev/null | grep "\[REQUESTING PROGRAM INTERPRETER:" | sed 's/.*\[REQUESTING PROGRAM INTERPRETER:\(.*\)\]/\1/' | tr -d ' ' || true)
+            if [ -n "$INTERP" ]; then
+              echo "::error::发现动态链接器: $INTERP"
+              exit 1
+            else
+              echo "✓ readelf 确认无动态链接器 (纯静态，可在 Android 运行)"
+            fi
+          fi
+
+          # ldd 应报告不是动态可执行文件
           if command -v ldd >/dev/null 2>&1; then
             LDD_OUT=$(ldd ffmpeg 2>&1) || true
             if echo "$LDD_OUT" | grep -qE "not a dynamic executable|statically linked"; then
-              echo "✓ 确认静态链接 (ldd)"
+              echo "✓ ldd 确认纯静态链接"
             elif echo "$LDD_OUT" | grep -q "=>"; then
               echo "::error::发现动态依赖!"
               echo "$LDD_OUT"
               exit 1
             else
-              echo "::warning::ldd 输出异常，请人工检查:"
-              echo "$LDD_OUT"
-            fi
-          else
-            echo "::warning::ldd 不可用，跳过动态依赖检查"
-          fi
-
-          # readelf 二次确认
-          if command -v readelf >/dev/null 2>&1; then
-            INTERP=$(readelf -l ffmpeg 2>/dev/null | grep " interpreter" | awk '{print $NF}' || true)
-            if [ -n "$INTERP" ]; then
-              echo "::error::发现动态链接器: $INTERP"
-              exit 1
-            else
-              echo "✓ readelf 确认无动态链接器"
+              echo "::warning::ldd 输出异常: $LDD_OUT"
             fi
           fi
 

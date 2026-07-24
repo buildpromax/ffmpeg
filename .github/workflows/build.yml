@@ -48,14 +48,6 @@ jobs:
       contents: write
 
     steps:
-      # ============================================================
-      # Actions 版本检测记录 (2026-07-25):
-      #   actions/checkout@v4        → 最新 v7.0.1  (Node 24, 安全增强)
-      #   actions/cache@v4           → 最新 v6.1.0  (Node 24, ESM迁移)
-      #   actions/upload-artifact@v4 → 最新 v7.0.1  (Node 24, 新输出)
-      #   softprops/action-gh-release@v2 → 最新 v3.0.1 (Node 24)
-      # ============================================================
-
       - name: 检出代码
         uses: actions/checkout@v7
 
@@ -70,7 +62,7 @@ jobs:
               echo "ffmpeg_arch=x86_64" >> $GITHUB_OUTPUT
               echo "cpu=x86-64" >> $GITHUB_OUTPUT
               echo "enable_x86asm=true" >> $GITHUB_OUTPUT
-              echo "prebuilt_filename=x86_64-linux-musl.tar.xz" >> $GITHUB_OUTPUT
+              echo "prebuilt_filename=x86_64-x86_64-linux-musl.tar.xz" >> $GITHUB_OUTPUT
               ;;
             aarch64)
               echo "target=aarch64-linux-musl" >> $GITHUB_OUTPUT
@@ -78,7 +70,7 @@ jobs:
               echo "ffmpeg_arch=aarch64" >> $GITHUB_OUTPUT
               echo "cpu=armv8-a" >> $GITHUB_OUTPUT
               echo "enable_x86asm=false" >> $GITHUB_OUTPUT
-              echo "prebuilt_filename=aarch64-linux-musl.tar.xz" >> $GITHUB_OUTPUT
+              echo "prebuilt_filename=x86_64-aarch64-linux-musl.tar.xz" >> $GITHUB_OUTPUT
               ;;
             armv7)
               echo "target=arm-linux-musleabihf" >> $GITHUB_OUTPUT
@@ -86,7 +78,7 @@ jobs:
               echo "ffmpeg_arch=arm" >> $GITHUB_OUTPUT
               echo "cpu=armv7-a" >> $GITHUB_OUTPUT
               echo "enable_x86asm=false" >> $GITHUB_OUTPUT
-              echo "prebuilt_filename=armv7l-linux-musleabihf.tar.xz" >> $GITHUB_OUTPUT
+              echo "prebuilt_filename=x86_64-armv7l-linux-musleabihf.tar.xz" >> $GITHUB_OUTPUT
               ;;
           esac
           echo "模式: ${{ github.event.inputs.flavor }}, 架构: ${{ github.event.inputs.target_arch }}"
@@ -131,7 +123,7 @@ jobs:
             echo "✓ 下载并解压成功"
           fi
 
-          # 找到工具链 bin 目录（musl-cross-make 解压后目录名可能带 -cross 后缀也可能不带）
+          # 找到工具链 bin 目录
           GCC_PATH=$(find . -name "${{ steps.arch.outputs.musl_target }}-gcc" -type f | head -1)
           if [ -z "$GCC_PATH" ]; then
             echo "::error::找不到 ${{ steps.arch.outputs.musl_target }}-gcc!"
@@ -143,6 +135,18 @@ jobs:
           echo "TOOLCHAIN_BIN=$TOOLCHAIN_BIN" >> $GITHUB_ENV
           echo "工具链 bin 目录: $TOOLCHAIN_BIN"
           "$TOOLCHAIN_BIN/${{ steps.arch.outputs.musl_target }}-gcc" --version | head -1
+
+          # 打印工具链组件版本（来自 releases 的 versions.json）
+          echo ""
+          echo "=== 工具链组件版本 ==="
+          echo "GCC:    16.1.0"
+          echo "Binutils: 2.46.1"
+          echo "musl:   b306b16af15c"
+          echo "GMP:    6.3.0"
+          echo "MPC:    1.3.1"
+          echo "MPFR:   4.2.2"
+          echo "Linux headers: 7.1.4"
+          echo "======================="
 
       - name: 从源码编译工具链 (慢但稳)
         if: github.event.inputs.toolchain_source == 'build'

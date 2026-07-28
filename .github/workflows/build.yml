@@ -26,13 +26,11 @@ on:
         default: 'github-release'
         type: choice
         options:
-          - github-release   # 从 GitHub Release 下载预编译(快,首次约 10-20 秒)
-          - build            # 从源码编译(慢,首次约 15-20 分钟)
+          - github-release
+          - build
 
 env:
-  # FFmpeg 版本
   FFMPEG_VERSION: "n8.1.2"
-  # 外部库版本（固定以保障可重现构建）
   X264_TAG: "stable"
   X265_TAG: "4.1"
   OPUS_VERSION: "1.5.2"
@@ -90,7 +88,11 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends             build-essential bison flex texinfo gperf patch             curl git nasm yasm cmake ninja-build pkg-config             autoconf automake libtool python3 xz-utils             qemu-user-static binfmt-support
+          sudo apt-get install -y --no-install-recommends \
+            build-essential bison flex texinfo gperf patch \
+            curl git nasm yasm cmake ninja-build pkg-config \
+            autoconf automake libtool python3 xz-utils \
+            qemu-user-static binfmt-support
 
       - name: 缓存工具链与源码
         uses: actions/cache@v6
@@ -103,7 +105,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-musl-${{ github.event.inputs.target_arch }}-${{ github.event.inputs.flavor }}-
 
-      # ============ 工具链准备 ============
       - name: 从 GitHub Release 下载预编译工具链
         if: github.event.inputs.toolchain_source == 'github-release'
         run: |
@@ -126,11 +127,9 @@ jobs:
             echo "✓ 下载并解压成功"
           fi
 
-          # 找到工具链 bin 目录，并转为绝对路径
           GCC_PATH=$(find "$PWD" -name "${{ steps.arch.outputs.musl_target }}-gcc" -type f | head -1)
           if [ -z "$GCC_PATH" ]; then
             echo "::error::找不到 ${{ steps.arch.outputs.musl_target }}-gcc!"
-            echo "当前目录结构:"
             find . -maxdepth 3 -type d | head -30
             exit 1
           fi
@@ -140,7 +139,7 @@ jobs:
           echo "工具链 bin 目录: $TOOLCHAIN_BIN"
           "$TOOLCHAIN_BIN/${{ steps.arch.outputs.musl_target }}-gcc" --version | head -1
 
-      - name: 从源码编译工具链 (慢但稳)
+      - name: 从源码编译工具链
         if: github.event.inputs.toolchain_source == 'build'
         run: |
           set -euo pipefail
@@ -150,14 +149,13 @@ jobs:
           cd musl-cross-make
           cat > config.mak <<EOF
           TARGET = ${{ steps.arch.outputs.target }}
-          OUTPUT = \$PWD/../toolchain
+          OUTPUT = \\$PWD/../toolchain
           COMMON_CONFIG += --enable-static --disable-shared
           GCC_CONFIG += --disable-gold --disable-lto
           MUSL_CONFIG += --enable-optimize
           EOF
           if [ ! -f "../toolchain/bin/${{ steps.arch.outputs.musl_target }}-gcc" ]; then
             echo "正在编译 musl 工具链 (${{ steps.arch.outputs.target }})..."
-            echo "首次编译大约需要 15-20 分钟..."
             make -j$(nproc) 2>&1 | tail -100
             make install
           else
@@ -168,12 +166,12 @@ jobs:
           echo "TOOLCHAIN_ROOT=$PWD/../toolchain" >> $GITHUB_ENV
           "$TOOLCHAIN_BIN/${{ steps.arch.outputs.musl_target }}-gcc" --version | head -1
 
-      # ============ ffmpeg 源码 ============
       - name: 克隆 FFmpeg
         run: |
           set -euo pipefail
           if [ ! -d "ffmpeg-src" ]; then
-            git clone --depth 1 --branch release/8.1               https://git.ffmpeg.org/ffmpeg.git ffmpeg-src
+            git clone --depth 1 --branch release/8.1 \
+              https://git.ffmpeg.org/ffmpeg.git ffmpeg-src
             cd ffmpeg-src
             git fetch --depth 1 origin tag ${{ env.FFMPEG_VERSION }}
             git checkout ${{ env.FFMPEG_VERSION }}
@@ -182,8 +180,7 @@ jobs:
           fi
           git log -1 --oneline
 
-      # ============ full 模式:编译外部库 ============
-      - name: 编译外部依赖库 (仅 full 模式)
+      - name: 编译外部依赖库
         if: github.event.inputs.flavor == 'full'
         run: |
           set -euo pipefail
@@ -198,33 +195,43 @@ jobs:
           export PREFIX=$PWD/ext-libs
           mkdir -p $PREFIX
 
-          # x264
           if [ ! -f "$PREFIX/lib/libx264.a" ]; then
             echo "=== 编译 x264 ==="
             if [ ! -d x264 ]; then
               git clone --depth 1 --branch ${{ env.X264_TAG }} https://code.videolan.org/videolan/x264.git
             fi
             cd x264
-            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }}               --cross-prefix=${{ steps.arch.outputs.musl_target }}-               --enable-static --disable-shared --disable-opencl --enable-pic               --extra-cflags="-static" --extra-ldflags="-static"
+            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }} \
+              --cross-prefix=${{ steps.arch.outputs.musl_target }}- \
+              --enable-static --disable-shared --disable-opencl --enable-pic \
+              --extra-cflags="-static" --extra-ldflags="-static"
             make -j$(nproc)
             make install
             cd ..
           fi
 
-          # x265
           if [ ! -f "$PREFIX/lib/libx265.a" ]; then
             echo "=== 编译 x265 ==="
             if [ ! -d x265 ]; then
               git clone --depth 1 --branch ${{ env.X265_TAG }} https://bitbucket.org/multicoreware/x265_git.git x265
             fi
             cd x265/build/linux
-            cmake -DCMAKE_INSTALL_PREFIX=$PREFIX                   -DCMAKE_SYSTEM_NAME=Linux                   -DCMAKE_SYSTEM_PROCESSOR=${{ github.event.inputs.target_arch }}                   -DCMAKE_C_COMPILER=$CC                   -DCMAKE_CXX_COMPILER=$CXX                   -DCMAKE_AR=$AR                   -DCMAKE_RANLIB=$RANLIB                   -DENABLE_SHARED=OFF -DENABLE_CLI=OFF                   -DCMAKE_C_FLAGS="-static" -DCMAKE_CXX_FLAGS="-static"                   -DCMAKE_EXE_LINKER_FLAGS="-static"                   ../../source 2>&1 | tail -10
+            cmake -DCMAKE_INSTALL_PREFIX=$PREFIX \
+                  -DCMAKE_SYSTEM_NAME=Linux \
+                  -DCMAKE_SYSTEM_PROCESSOR=${{ github.event.inputs.target_arch }} \
+                  -DCMAKE_C_COMPILER=$CC \
+                  -DCMAKE_CXX_COMPILER=$CXX \
+                  -DCMAKE_AR=$AR \
+                  -DCMAKE_RANLIB=$RANLIB \
+                  -DENABLE_SHARED=OFF -DENABLE_CLI=OFF \
+                  -DCMAKE_C_FLAGS="-static" -DCMAKE_CXX_FLAGS="-static" \
+                  -DCMAKE_EXE_LINKER_FLAGS="-static" \
+                  ../../source 2>&1 | tail -10
             make -j$(nproc)
             make install
             cd ../../..
           fi
 
-          # opus
           if [ ! -f "$PREFIX/lib/libopus.a" ]; then
             echo "=== 编译 opus ==="
             if [ ! -d opus ]; then
@@ -232,26 +239,31 @@ jobs:
               mv opus-${{ env.OPUS_VERSION }} opus
             fi
             cd opus
-            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }}               --enable-static --disable-shared --disable-doc               CFLAGS="-static -Os" LDFLAGS="-static"
+            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }} \
+              --enable-static --disable-shared --disable-doc \
+              CFLAGS="-static -Os" LDFLAGS="-static"
             make -j$(nproc)
             make install
             cd ..
           fi
 
-          # vpx
           if [ ! -f "$PREFIX/lib/libvpx.a" ]; then
             echo "=== 编译 vpx ==="
             if [ ! -d libvpx ]; then
               git clone --depth 1 --branch ${{ env.VPX_TAG }} https://chromium.googlesource.com/webm/libvpx.git
             fi
             cd libvpx
-            CROSS=${{ steps.arch.outputs.musl_target }}-               ./configure --prefix=$PREFIX                 --disable-shared --enable-static                 --disable-unit-tests --disable-examples                 --disable-docs --enable-vp9-highbitdepth --enable-pic                 --extra-cflags="-static" --extra-ldflags="-static"
+            CROSS=${{ steps.arch.outputs.musl_target }}- \
+              ./configure --prefix=$PREFIX \
+                --disable-shared --enable-static \
+                --disable-unit-tests --disable-examples \
+                --disable-docs --enable-vp9-highbitdepth --enable-pic \
+                --extra-cflags="-static" --extra-ldflags="-static"
             make -j$(nproc)
             make install
             cd ..
           fi
 
-          # fdk-aac
           if [ ! -f "$PREFIX/lib/libfdk-aac.a" ]; then
             echo "=== 编译 fdk-aac ==="
             if [ ! -d fdk-aac ]; then
@@ -259,13 +271,14 @@ jobs:
             fi
             cd fdk-aac
             autoreconf -fiv
-            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }}               --enable-static --disable-shared               CFLAGS="-static -Os" LDFLAGS="-static"
+            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }} \
+              --enable-static --disable-shared \
+              CFLAGS="-static -Os" LDFLAGS="-static"
             make -j$(nproc)
             make install
             cd ..
           fi
 
-          # lame
           if [ ! -f "$PREFIX/lib/libmp3lame.a" ]; then
             echo "=== 编译 lame ==="
             if [ ! -d lame ]; then
@@ -273,7 +286,9 @@ jobs:
               mv lame-${{ env.LAME_VERSION }} lame
             fi
             cd lame
-            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }}               --enable-static --disable-shared               CFLAGS="-static -Os" LDFLAGS="-static"
+            ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }} \
+              --enable-static --disable-shared \
+              CFLAGS="-static -Os" LDFLAGS="-static"
             make -j$(nproc)
             make install
             cd ..
@@ -282,7 +297,6 @@ jobs:
           echo "=== 外部库编译完成 ==="
           ls -lh $PREFIX/lib/*.a 2>/dev/null || true
 
-      # ============ 配置 ffmpeg ============
       - name: 配置 FFmpeg
         working-directory: ffmpeg-src
         run: |
@@ -351,16 +365,14 @@ jobs:
           make -j$(nproc) 2>&1 | tail -30
           make install
 
-      # ============ 验证 ============
       - name: 验证静态二进制
         run: |
           set -euo pipefail
           cd ${GITHUB_WORKSPACE}/ffmpeg-out/bin
           file ffmpeg
 
-          # 纯静态检查：不应有任何 interpreter
           if command -v readelf >/dev/null 2>&1; then
-            INTERP=$(readelf -l ffmpeg 2>/dev/null | grep "\[REQUESTING PROGRAM INTERPRETER:" | sed 's/.*\[REQUESTING PROGRAM INTERPRETER:\(.*\)\]//' | tr -d ' ' || true)
+            INTERP=$(readelf -l ffmpeg 2>/dev/null | grep "REQUESTING PROGRAM INTERPRETER" | sed 's/.*REQUESTING PROGRAM INTERPRETER:\(.*\)\]/\1/' | tr -d ' ' || true)
             if [ -n "$INTERP" ]; then
               echo "::error::发现动态链接器: $INTERP"
               exit 1
@@ -369,7 +381,6 @@ jobs:
             fi
           fi
 
-          # ldd 应报告不是动态可执行文件
           if command -v ldd >/dev/null 2>&1; then
             LDD_OUT=$(ldd ffmpeg 2>&1) || true
             if echo "$LDD_OUT" | grep -qE "not a dynamic executable|statically linked"; then
@@ -385,12 +396,13 @@ jobs:
 
           ls -lh ffmpeg ffprobe
 
-          # 执行测试：同架构直接运行，跨架构用 QEMU
           if [ "${{ steps.arch.outputs.can_run_native }}" = "true" ]; then
             echo "=== 同架构执行测试 ==="
             ./ffmpeg -version 2>&1 | head -3
             ./ffprobe -version 2>&1 | head -3
-            ./ffmpeg -f lavfi -i "testsrc=duration=1:size=320x240:rate=10"                      -f lavfi -i "sine=frequency=440:duration=1"                      -c:v mpeg4 -c:a aac /tmp/test.mp4 -y 2>&1 | tail -5
+            ./ffmpeg -f lavfi -i "testsrc=duration=1:size=320x240:rate=10" \
+                     -f lavfi -i "sine=frequency=440:duration=1" \
+                     -c:v mpeg4 -c:a aac /tmp/test.mp4 -y 2>&1 | tail -5
             ls -lh /tmp/test.mp4
             ./ffprobe /tmp/test.mp4 2>&1 | head -10
           else
@@ -399,7 +411,9 @@ jobs:
             if [ "$QEMU_ARCH" = "armv7" ]; then QEMU_ARCH="arm"; fi
             qemu-${QEMU_ARCH}-static ./ffmpeg -version 2>&1 | head -3
             qemu-${QEMU_ARCH}-static ./ffprobe -version 2>&1 | head -3
-            qemu-${QEMU_ARCH}-static ./ffmpeg -f lavfi -i "testsrc=duration=1:size=320x240:rate=10"                      -f lavfi -i "sine=frequency=440:duration=1"                      -c:v mpeg4 -c:a aac /tmp/test.mp4 -y 2>&1 | tail -5
+            qemu-${QEMU_ARCH}-static ./ffmpeg -f lavfi -i "testsrc=duration=1:size=320x240:rate=10" \
+                     -f lavfi -i "sine=frequency=440:duration=1" \
+                     -c:v mpeg4 -c:a aac /tmp/test.mp4 -y 2>&1 | tail -5
             ls -lh /tmp/test.mp4
             qemu-${QEMU_ARCH}-static ./ffprobe /tmp/test.mp4 2>&1 | head -10
           fi
@@ -418,7 +432,7 @@ jobs:
           path: ffmpeg-out/bin/ffmpeg-${{ github.event.inputs.flavor }}-${{ github.event.inputs.target_arch }}-musl.tar.gz
           retention-days: 30
 
-      - name: 发布到 Release (打 tag 时)
+      - name: 发布到 Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v3
         with:

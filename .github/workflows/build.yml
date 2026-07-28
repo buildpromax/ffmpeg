@@ -344,6 +344,7 @@ jobs:
             "--prefix=${GITHUB_WORKSPACE}/ffmpeg-out"
             "--enable-cross-compile"
             "--cross-prefix=${{ steps.arch.outputs.musl_target }}-"
+            "--pkg-config=pkg-config"
             "--sysroot=${TOOLCHAIN_ROOT}"
             "--pkg-config-flags=--static"
             "--extra-cflags=-static -Os"

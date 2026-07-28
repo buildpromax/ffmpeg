@@ -101,7 +101,7 @@ jobs:
             toolchain
             ffmpeg-src
             ext-libs
-          key: ${{ runner.os }}-musl-${{ github.event.inputs.target_arch }}-${{ github.event.inputs.flavor }}-${{ github.event.inputs.toolchain_source }}-ffmpeg-${{ env.FFMPEG_VERSION }}-v10
+          key: ${{ runner.os }}-musl-${{ github.event.inputs.target_arch }}-${{ github.event.inputs.flavor }}-${{ github.event.inputs.toolchain_source }}-ffmpeg-${{ env.FFMPEG_VERSION }}-v11
           restore-keys: |
             ${{ runner.os }}-musl-${{ github.event.inputs.target_arch }}-${{ github.event.inputs.flavor }}-
 
@@ -127,10 +127,14 @@ jobs:
             echo "✓ 下载并解压成功"
           fi
 
+          echo "=== 工具链目录结构 ==="
+          find "$PWD" -maxdepth 3 -type d | head -20
+          echo "=== 查找 gcc ==="
+          find "$PWD" -name "*-gcc" -type f | head -10
+
           GCC_PATH=$(find "$PWD" -name "${{ steps.arch.outputs.musl_target }}-gcc" -type f | head -1)
           if [ -z "$GCC_PATH" ]; then
             echo "::error::找不到 ${{ steps.arch.outputs.musl_target }}-gcc!"
-            find . -maxdepth 3 -type d | head -30
             exit 1
           fi
           TOOLCHAIN_BIN=$(dirname "$GCC_PATH")
@@ -228,7 +232,7 @@ jobs:
             cd ..
           fi
 
-          # x265（使用 toolchain file，避免 CMake 交叉编译问题）
+          # x265
           if [ ! -f "$PREFIX/lib/libx265.a" ]; then
             echo "=== 编译 x265 ==="
             if [ ! -d x265 ]; then
@@ -261,7 +265,7 @@ jobs:
             cd ..
           fi
 
-          # vpx
+          # vpx（libvpx 用环境变量 CFLAGS/LDFLAGS，不支持 --extra-cflags/--extra-ldflags）
           if [ ! -f "$PREFIX/lib/libvpx.a" ]; then
             echo "=== 编译 vpx ==="
             if [ ! -d libvpx ]; then
@@ -269,11 +273,11 @@ jobs:
             fi
             cd libvpx
             CROSS=${{ steps.arch.outputs.musl_target }}- \
+            CFLAGS="-static" LDFLAGS="-static" \
               ./configure --prefix=$PREFIX \
                 --disable-shared --enable-static \
                 --disable-unit-tests --disable-examples \
-                --disable-docs --enable-vp9-highbitdepth --enable-pic \
-                --extra-cflags="-static" --extra-ldflags="-static"
+                --disable-docs --enable-vp9-highbitdepth --enable-pic
             make -j$(nproc)
             make install
             cd ..

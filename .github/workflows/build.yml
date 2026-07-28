@@ -470,7 +470,6 @@ jobs:
     permissions:
       contents: write
       actions: read
-      actions: read
     steps:
       - name: 下载所有产物
         uses: actions/download-artifact@v8

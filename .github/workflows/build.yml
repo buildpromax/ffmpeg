@@ -50,38 +50,48 @@ env:
   LAME_VERSION: "3.100"
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          ARCH="${{ github.event.inputs.target_arch }}"
+          case "$ARCH" in
+            all)
+              echo 'matrix={"include":[
+                {"arch":"x86_64","musl_target":"x86_64-linux-musl","ffmpeg_arch":"x86_64","cpu":"x86-64","enable_x86asm":"true","prebuilt_filename":"x86_64-x86_64-linux-musl.tar.xz","can_run_native":"true","vpx_target":"x86_64-linux-gcc"},
+                {"arch":"aarch64","musl_target":"aarch64-linux-musl","ffmpeg_arch":"aarch64","cpu":"armv8-a","enable_x86asm":"false","prebuilt_filename":"x86_64-aarch64-linux-musl.tar.xz","can_run_native":"false","vpx_target":"arm64-linux-gcc"},
+                {"arch":"armv7","musl_target":"armv7l-linux-musleabihf","ffmpeg_arch":"arm","cpu":"armv7-a","enable_x86asm":"false","prebuilt_filename":"x86_64-armv7l-linux-musleabihf.tar.xz","can_run_native":"false","vpx_target":"armv7-linux-gcc"}
+              ]}' >> $GITHUB_OUTPUT
+              ;;
+            x86_64)
+              echo 'matrix={"include":[
+                {"arch":"x86_64","musl_target":"x86_64-linux-musl","ffmpeg_arch":"x86_64","cpu":"x86-64","enable_x86asm":"true","prebuilt_filename":"x86_64-x86_64-linux-musl.tar.xz","can_run_native":"true","vpx_target":"x86_64-linux-gcc"}
+              ]}' >> $GITHUB_OUTPUT
+              ;;
+            aarch64)
+              echo 'matrix={"include":[
+                {"arch":"aarch64","musl_target":"aarch64-linux-musl","ffmpeg_arch":"aarch64","cpu":"armv8-a","enable_x86asm":"false","prebuilt_filename":"x86_64-aarch64-linux-musl.tar.xz","can_run_native":"false","vpx_target":"arm64-linux-gcc"}
+              ]}' >> $GITHUB_OUTPUT
+              ;;
+            armv7)
+              echo 'matrix={"include":[
+                {"arch":"armv7","musl_target":"armv7l-linux-musleabihf","ffmpeg_arch":"arm","cpu":"armv7-a","enable_x86asm":"false","prebuilt_filename":"x86_64-armv7l-linux-musleabihf.tar.xz","can_run_native":"false","vpx_target":"armv7-linux-gcc"}
+              ]}' >> $GITHUB_OUTPUT
+              ;;
+          esac
+
   build:
     name: 编译 ${{ github.event.inputs.flavor }} (${{ matrix.arch }})
+    needs: prepare
     runs-on: ubuntu-latest
-    if: github.event.inputs.target_arch == 'all' || matrix.arch == github.event.inputs.target_arch
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - arch: x86_64
-            musl_target: x86_64-linux-musl
-            ffmpeg_arch: x86_64
-            cpu: x86-64
-            enable_x86asm: true
-            prebuilt_filename: x86_64-x86_64-linux-musl.tar.xz
-            can_run_native: true
-            vpx_target: x86_64-linux-gcc
-          - arch: aarch64
-            musl_target: aarch64-linux-musl
-            ffmpeg_arch: aarch64
-            cpu: armv8-a
-            enable_x86asm: false
-            prebuilt_filename: x86_64-aarch64-linux-musl.tar.xz
-            can_run_native: false
-            vpx_target: arm64-linux-gcc
-          - arch: armv7
-            musl_target: armv7l-linux-musleabihf
-            ffmpeg_arch: arm
-            cpu: armv7-a
-            enable_x86asm: false
-            prebuilt_filename: x86_64-armv7l-linux-musleabihf.tar.xz
-            can_run_native: false
-            vpx_target: armv7-linux-gcc
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
 
     steps:
       - name: 检出代码

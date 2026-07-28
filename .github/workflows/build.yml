@@ -469,12 +469,15 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: read
+      actions: read
     steps:
       - name: 下载所有产物
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
           pattern: ffmpeg-*
+          merge-multiple: true
 
       - name: 创建 Release
         uses: softprops/action-gh-release@v3

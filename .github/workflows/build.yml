@@ -62,6 +62,7 @@ jobs:
               echo "enable_x86asm=true" >> $GITHUB_OUTPUT
               echo "prebuilt_filename=x86_64-x86_64-linux-musl.tar.xz" >> $GITHUB_OUTPUT
               echo "can_run_native=true" >> $GITHUB_OUTPUT
+              echo "vpx_target=x86_64-linux-gcc" >> $GITHUB_OUTPUT
               ;;
             aarch64)
               echo "target=aarch64-linux-musl" >> $GITHUB_OUTPUT
@@ -71,6 +72,7 @@ jobs:
               echo "enable_x86asm=false" >> $GITHUB_OUTPUT
               echo "prebuilt_filename=x86_64-aarch64-linux-musl.tar.xz" >> $GITHUB_OUTPUT
               echo "can_run_native=false" >> $GITHUB_OUTPUT
+              echo "vpx_target=arm64-linux-gcc" >> $GITHUB_OUTPUT
               ;;
             armv7)
               echo "target=arm-linux-musleabihf" >> $GITHUB_OUTPUT
@@ -80,6 +82,7 @@ jobs:
               echo "enable_x86asm=false" >> $GITHUB_OUTPUT
               echo "prebuilt_filename=x86_64-armv7l-linux-musleabihf.tar.xz" >> $GITHUB_OUTPUT
               echo "can_run_native=false" >> $GITHUB_OUTPUT
+              echo "vpx_target=armv7-linux-gcc" >> $GITHUB_OUTPUT
               ;;
           esac
           echo "模式: ${{ github.event.inputs.flavor }}, 架构: ${{ github.event.inputs.target_arch }}"
@@ -101,7 +104,7 @@ jobs:
             toolchain
             ffmpeg-src
             ext-libs
-          key: ${{ runner.os }}-musl-${{ github.event.inputs.target_arch }}-${{ github.event.inputs.flavor }}-${{ github.event.inputs.toolchain_source }}-ffmpeg-${{ env.FFMPEG_VERSION }}-v11
+          key: ${{ runner.os }}-musl-${{ github.event.inputs.target_arch }}-${{ github.event.inputs.flavor }}-${{ github.event.inputs.toolchain_source }}-ffmpeg-${{ env.FFMPEG_VERSION }}-v12
           restore-keys: |
             ${{ runner.os }}-musl-${{ github.event.inputs.target_arch }}-${{ github.event.inputs.flavor }}-
 
@@ -225,7 +228,7 @@ jobs:
             cd x264
             ./configure --prefix=$PREFIX --host=${{ steps.arch.outputs.musl_target }} \
               --cross-prefix=${{ steps.arch.outputs.musl_target }}- \
-              --enable-static --disable-shared --disable-opencl --enable-pic \
+              --enable-static --disable-opencl --enable-pic \
               --extra-cflags="-static" --extra-ldflags="-static"
             make -j$(nproc)
             make install
@@ -265,7 +268,7 @@ jobs:
             cd ..
           fi
 
-          # vpx（libvpx 用环境变量 CFLAGS/LDFLAGS，不支持 --extra-cflags/--extra-ldflags）
+          # vpx（libvpx 需要显式 --target，不会从 cross-prefix 自动推断）
           if [ ! -f "$PREFIX/lib/libvpx.a" ]; then
             echo "=== 编译 vpx ==="
             if [ ! -d libvpx ]; then
@@ -275,6 +278,7 @@ jobs:
             CROSS=${{ steps.arch.outputs.musl_target }}- \
             CFLAGS="-static" LDFLAGS="-static" \
               ./configure --prefix=$PREFIX \
+                --target=${{ steps.arch.outputs.vpx_target }} \
                 --disable-shared --enable-static \
                 --disable-unit-tests --disable-examples \
                 --disable-docs --enable-vp9-highbitdepth --enable-pic

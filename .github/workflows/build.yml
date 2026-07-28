@@ -322,6 +322,13 @@ jobs:
           echo "=== 外部库编译完成 ==="
           ls -lh $PREFIX/lib/*.a 2>/dev/null || true
 
+      - name: 设置 pkg-config 路径
+        run: |
+          set -euo pipefail
+          echo "PKG_CONFIG_PATH=$PWD/ext-libs/lib/pkgconfig" >> $GITHUB_ENV
+          echo "PKG_CONFIG_LIBDIR=$PWD/ext-libs/lib/pkgconfig" >> $GITHUB_ENV
+          ls -la $PWD/ext-libs/lib/pkgconfig/ 2>/dev/null || echo "pkgconfig 目录不存在或为空"
+
       - name: 配置 FFmpeg
         working-directory: ffmpeg-src
         run: |

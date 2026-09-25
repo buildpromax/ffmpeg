@@ -283,10 +283,15 @@ build_harfbuzz() {
 
 build_ass() {
     get_tar_src libass https://github.com/libass/libass/releases/download/0.17.3/libass-0.17.3.tar.xz
+    # android x86: libass 的 x86 手写汇编(blend_bitmaps.asm 等)在 nasm 下产生
+    # R_386_32 绝对寻址, 链入 libavfilter.so 时 lld 拒绝(text reloc), 关闭之
+    local xa=()
+    if [ "$TARGET_OS" = android ] && [ "$FFARCH" = x86 ]; then xa+=(--disable-asm); fi
     ( cd "$SRC_DIR/libass" && \
       ./configure --host="$AHOST" --prefix="$PREFIX" \
         --disable-shared --enable-static --disable-testbuild \
-        --disable-require-system-font-provider && \
+        --disable-require-system-font-provider \
+        "${xa[@]+"${xa[@]}"}" && \
       amake && make install )
 }
 

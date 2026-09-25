@@ -210,6 +210,11 @@ build_ogg() {
 
 build_vorbis() {
     get_tar_src libvorbis https://github.com/xiph/vorbis/releases/download/v1.3.7/libvorbis-1.3.7.tar.gz
+    if [ "$TARGET_OS" = android ]; then
+        # libvorbis 老式 configure 在 *86*-linux* 分支硬编码 gcc 专属的
+        # -mno-ieee-fp 并覆盖 CFLAGS, clang 无法识别, 预先剔除(其余 flag 均兼容)
+        sed -i 's/-mno-ieee-fp//g' "$SRC_DIR/libvorbis/configure"
+    fi
     acon "$SRC_DIR/libvorbis" && \
     ( cd "$SRC_DIR/libvorbis" && amake && make install )
 }

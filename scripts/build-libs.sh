@@ -26,6 +26,18 @@ libs_main() {
     if [ -s "$LIBS_FAILED_FILE" ]; then
         warn "以下可选库编译失败(不影响产物): $(paste -sd, "$LIBS_FAILED_FILE")"
     fi
+
+    # 消毒 CMake 生成的 .pc: clang 隐式库 "-l:libunwind.a" 会被部分工程的
+    # pc 生成逻辑二次加 -l 前缀变成非法的 "-l-l:libunwind.a"(x265 实测),
+    # 还原为 lld 可识别的 "-l:libunwind.a"
+    local pc
+    for pc in "$PREFIX/lib/pkgconfig"/*.pc; do
+        [ -e "$pc" ] || break
+        if grep -q -- '-l-l:' "$pc" 2>/dev/null; then
+            sed -i -E 's/-l(-l:[^ ]+)/\1/g' "$pc"
+            warn "已修复 .pc 中的 -l-l: 畸形库引用: $(basename "$pc")"
+        fi
+    done
 }
 
 # ============================================================ 基础库

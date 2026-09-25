@@ -99,6 +99,7 @@ cmk() { # cmk <srcdir> <builddir> [extra cmake flags...]
 mson() { # mson <srcdir> <builddir> [extra meson flags...]
     local src=$1 build=$2; shift 2
     meson setup "$build" "$src" --cross-file "$MESON_CF" \
+        --prefix "$PREFIX" \
         --default-library=static --buildtype=release "$@" || die "meson 配置失败: $src"
 }
 

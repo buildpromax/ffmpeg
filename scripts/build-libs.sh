@@ -97,11 +97,12 @@ build_vpx() {
     local t
     if [ "$TARGET_OS" = android ]; then
         case "$FFARCH" in
-            aarch64) t=arm64-android-clang ;; arm) t=armv7-android-clang ;;
-            x86_64) t=x86_64-android-clang ;; x86) t=x86-android-clang ;;
+            aarch64) t=arm64-android-gcc ;; arm) t=armv7-android-gcc ;;
+            x86_64) t=x86_64-android-gcc ;; x86) t=x86-android-gcc ;;
         esac
+        # vpx 通过环境变量 CC/AS 取编译器(vpx 1.15 已无 --sdk-path 选项)
         ( cd "$SRC_DIR/libvpx" && \
-          ./configure --target="$t" --sdk-path="$ANDROID_NDK_ROOT" --prefix="$PREFIX" \
+          AS="$CC" ./configure --target="$t" --prefix="$PREFIX" \
             --disable-shared --enable-static --disable-examples --disable-tools \
             --disable-docs --disable-unit-tests --enable-vp9-highbitdepth --enable-pic && \
           amake && make install )

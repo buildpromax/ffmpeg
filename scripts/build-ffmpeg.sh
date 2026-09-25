@@ -170,8 +170,10 @@ ffmpeg_main() {
     if [ -z "$verinfo" ] && [ "$TARGET_OS" != android ]; then
         # 交叉产物在本机无法直接运行, 借助 musl loader 获取版本信息
         local ldso
-        ldso=$(find "${TC_ROOT:-/nonexistent}" -name 'ld-musl-*.so*' -o -name 'libc.so' 2>/dev/null | head -1)
-        [ -n "$ldso" ] && verinfo=$("$ldso" "$bin" -hide_banner -version 2>/dev/null | head -3)
+        ldso=$(find "$TC_ROOT" -name 'ld-musl-*.so.1' 2>/dev/null | head -1) || true
+        if [ -n "$ldso" ]; then
+            verinfo=$("$ldso" "$bin" -hide_banner -version 2>/dev/null | head -3) || true
+        fi
     fi
     [ -n "$verinfo" ] || verinfo="version info unavailable (cross-built binary)"
 

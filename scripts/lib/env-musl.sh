@@ -77,6 +77,8 @@ export STRIP="$TRIPLE-strip"
 export NM="$TRIPLE-nm"
 export CFLAGS="-O2"
 export CXXFLAGS="-O2"
+# armv7 工具链默认无 NEON, 全局启用(aom/x264/ffmpeg 的 neon 内联/汇编需要)
+[ "$MUSL_ARCH" = armv7 ] && export CFLAGS="-O2 -mfpu=neon" CXXFLAGS="-O2 -mfpu=neon"
 export CPPFLAGS="-I$PREFIX/include"
 export LDFLAGS="-L$PREFIX/lib"
 export PKG_CONFIG_LIBDIR="$PREFIX/lib/pkgconfig:$PREFIX/share/pkgconfig"

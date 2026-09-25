@@ -37,6 +37,8 @@ export STRIP="$_TC/bin/llvm-strip"
 export NM="$_TC/bin/llvm-nm"
 export CFLAGS="-O2 -fPIC"
 export CXXFLAGS="-O2 -fPIC"
+# android armv7 默认不带 NEON
+[ "$ABI" = armeabi-v7a ] && export CFLAGS="-O2 -fPIC -mfpu=neon" CXXFLAGS="-O2 -fPIC -mfpu=neon"
 export CPPFLAGS="-I$PREFIX/include"
 export LDFLAGS="-L$PREFIX/lib"
 export PKG_CONFIG_LIBDIR="$PREFIX/lib/pkgconfig:$PREFIX/share/pkgconfig"

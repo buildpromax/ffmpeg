@@ -1,0 +1,210 @@
+name: FFmpeg 手动构建
+
+# 手动触发: 可固定 FFmpeg 版本 / NDK 版本 / 目标架构 / 变体
+# ffmpeg_ref 支持: latest | master | n8.1.2 | 8.1.2 | commit sha
+
+on:
+  workflow_dispatch:
+    inputs:
+      ffmpeg_ref:
+        description: 'FFmpeg 版本 (latest=最新release / master / n8.1.2 / 8.1.2 / commit sha)'
+        required: true
+        default: 'latest'
+        type: string
+      variant:
+        description: '构建变体'
+        required: true
+        default: 'ultimate'
+        type: choice
+        options:
+          - minimal
+          - full
+          - ultimate
+      android_abis:
+        description: 'Android ABI (all / none / 逗号分隔: armeabi-v7a,arm64-v8a,x86,x86_64)'
+        required: true
+        default: 'all'
+        type: string
+      musl_arches:
+        description: 'musl 架构 (all / none / 逗号分隔: x86_64,aarch64,armv7,riscv64)'
+        required: true
+        default: 'all'
+        type: string
+      ndk_version:
+        description: 'Android NDK 版本'
+        required: true
+        default: 'r29'
+        type: string
+      android_api:
+        description: 'Android API 级别'
+        required: true
+        default: '24'
+        type: string
+      create_release:
+        description: '是否创建 Release'
+        required: true
+        default: true
+        type: boolean
+      release_tag:
+        description: 'Release Tag (latest=滚动更新 / 其他=固定tag)'
+        required: false
+        default: 'latest'
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  resolve:
+    name: 解析构建矩阵
+    runs-on: ubuntu-latest
+    outputs:
+      matrix_json: ${{ steps.matrix.outputs.matrix_json }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 生成构建矩阵
+        id: matrix
+        env:
+          FFMPEG_REF: ${{ inputs.ffmpeg_ref || 'latest' }}
+          VARIANT: ${{ inputs.variant || 'ultimate' }}
+          ANDROID_ABIS: ${{ inputs.android_abis || 'all' }}
+          MUSL_ARCHES: ${{ inputs.musl_arches || 'all' }}
+          NDK: ${{ inputs.ndk_version || 'r29' }}
+          API: ${{ inputs.android_api || '24' }}
+        run: |
+          python3 - << 'PYEOF'
+          import json, os, subprocess
+
+          def resolve(ref):
+              out = subprocess.check_output(
+                  ["bash", "scripts/resolve-ref.sh", ref], text=True).strip()
+              ver, checkout, mode = out.split("|")
+              return ver, checkout, mode
+
+          def expand(s, default, aliases=None):
+              s = (s or "").strip().lower()
+              if s in ("", "all", "*"):
+                  return list(default)
+              if s in ("none", "off", "no"):
+                  return []
+              items = [x.strip() for x in s.split(",") if x.strip()]
+              if aliases:
+                  items = [aliases.get(i, i) for i in items]
+              return items
+
+          ABIS = ["armeabi-v7a", "arm64-v8a", "x86", "x86_64"]
+          ABI_ALIAS = {"arm64": "arm64-v8a", "armv7": "armeabi-v7a", "arm": "armeabi-v7a"}
+          MUSL = ["x86_64", "aarch64", "armv7", "riscv64"]
+          MUSL_ALIAS = {"arm": "armv7"}
+
+          abis = expand(os.environ["ANDROID_ABIS"], ABIS, ABI_ALIAS)
+          musl = expand(os.environ["MUSL_ARCHES"], MUSL, MUSL_ALIAS)
+          refs = [r.strip() for r in os.environ["FFMPEG_REF"].split(",") if r.strip()]
+          variant = os.environ["VARIANT"]
+          ndk, api = os.environ["NDK"], os.environ["API"]
+
+          matrix = []
+          for ref in refs:
+              ver, checkout, mode = resolve(ref)
+              for abi in abis:
+                  matrix.append(dict(os="android", arch=abi, ver=ver, ref=checkout,
+                                     mode=mode, variant=variant, ndk=ndk, api=api))
+              for a in musl:
+                  matrix.append(dict(os="musl", arch=a, ver=ver, ref=checkout,
+                                     mode=mode, variant=variant, ndk=ndk, api=api))
+
+          if not matrix:
+              raise SystemExit("构建矩阵为空: 请检查 android_abis / musl_arches 输入")
+
+          print(json.dumps({"include": matrix}, indent=2, ensure_ascii=False))
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("matrix_json=" + json.dumps({"include": matrix}) + "\n")
+          PYEOF
+
+  build:
+    name: 编译 ${{ matrix.os }}-${{ matrix.arch }} @ ${{ matrix.ver }}
+    needs: resolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.resolve.outputs.matrix_json) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装构建依赖
+        run: |
+          set -e
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            build-essential nasm yasm cmake ninja-build meson pkg-config \
+            autoconf automake libtool autoconf-archive autopoint gettext gperf \
+            texinfo perl python3 zip unzip xz-utils curl git
+
+      - name: 缓存工具链
+        uses: actions/cache@v4
+        with:
+          path: cache
+          key: tc-${{ runner.os }}-${{ matrix.os }}-${{ matrix.arch }}-ndk${{ matrix.ndk }}-v1
+          restore-keys: |
+            tc-${{ runner.os }}-${{ matrix.os }}-${{ matrix.arch }}-
+
+      - name: 编译 FFmpeg
+        run: |
+          bash scripts/ci-build.sh \
+            --os "${{ matrix.os }}" \
+            --arch "${{ matrix.arch }}" \
+            --variant "${{ matrix.variant }}" \
+            --ref "${{ matrix.ref }}" \
+            --ver "${{ matrix.ver }}" \
+            --mode "${{ matrix.mode }}" \
+            --ndk "${{ matrix.ndk }}" \
+            --api "${{ matrix.api }}" \
+            --cache cache \
+            --out out
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-${{ matrix.ver }}-${{ matrix.os }}-${{ matrix.arch }}
+          path: out/*
+          retention-days: 30
+
+  release:
+    name: 发布 Release
+    needs: [resolve, build]
+    if: ${{ inputs.create_release }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 下载全部产物
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ffmpeg-*
+          merge-multiple: true
+          path: rel
+
+      - name: 发布
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag || 'latest' }}
+        run: |
+          set -e
+          cd rel
+          ls -lh
+          sha256sum ./* > SHA256SUMS.txt
+          notes="FFmpeg ${{ inputs.ffmpeg_ref || 'latest' }} 自动交叉编译 (${{
+            inputs.variant || 'ultimate' }} 变体)
+
+          - Android NDK 四架构: armeabi-v7a / arm64-v8a / x86 / x86_64 (zip)
+          - Linux musl 四架构: x86_64 / aarch64 / armv7 / riscv64 (tar.xz, 全静态)
+          - 构建时间: $(date -u '+%Y-%m-%d %H:%M UTC')
+          - 校验: SHA256SUMS.txt"
+
+          if [ "$TAG" = "latest" ]; then
+            gh release delete latest --cleanup-tag -y 2>/dev/null || true
+          fi
+          gh release create "$TAG" ./* --title "FFmpeg ${{ inputs.ffmpeg_ref || 'latest' }}" --notes "$notes" \
+            || gh release upload "$TAG" --clobber ./*
+          echo "发布完成: $TAG"

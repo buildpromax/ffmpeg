@@ -1,0 +1,238 @@
+name: FFmpeg 自动构建
+
+# 每天 02:00 (UTC+8) 自动构建:
+#   - FFmpeg 最新稳定 release (发布到固定 tag: ffmpeg-<版本>)
+#   - FFmpeg master 快照   (发布到滚动 tag: latest)
+# 支持手动 dispatch, 可缩小范围快速测试
+
+on:
+  schedule:
+    - cron: '0 18 * * *'   # UTC 18:00 = 北京时间 02:00
+  workflow_dispatch:
+    inputs:
+      ffmpeg_refs:
+        description: 'FFmpeg 版本列表 (逗号分隔: latest,master)'
+        required: true
+        default: 'latest,master'
+        type: string
+      variant:
+        description: '构建变体'
+        required: true
+        default: 'ultimate'
+        type: choice
+        options:
+          - minimal
+          - full
+          - ultimate
+      android_abis:
+        description: 'Android ABI (all / none / 逗号分隔)'
+        required: true
+        default: 'all'
+        type: string
+      musl_arches:
+        description: 'musl 架构 (all / none / 逗号分隔)'
+        required: true
+        default: 'all'
+        type: string
+      ndk_version:
+        description: 'Android NDK 版本'
+        required: true
+        default: 'r29'
+        type: string
+      android_api:
+        description: 'Android API 级别'
+        required: true
+        default: '24'
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ffmpeg-auto
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    name: 解析构建矩阵
+    runs-on: ubuntu-latest
+    outputs:
+      matrix_json: ${{ steps.matrix.outputs.matrix_json }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 生成构建矩阵
+        id: matrix
+        env:
+          FFMPEG_REFS: ${{ inputs.ffmpeg_refs || 'latest,master' }}
+          VARIANT: ${{ inputs.variant || 'ultimate' }}
+          ANDROID_ABIS: ${{ inputs.android_abis || 'all' }}
+          MUSL_ARCHES: ${{ inputs.musl_arches || 'all' }}
+          NDK: ${{ inputs.ndk_version || 'r29' }}
+          API: ${{ inputs.android_api || '24' }}
+        run: |
+          python3 - << 'PYEOF'
+          import json, os, subprocess
+
+          def resolve(ref):
+              out = subprocess.check_output(
+                  ["bash", "scripts/resolve-ref.sh", ref], text=True).strip()
+              ver, checkout, mode = out.split("|")
+              return ver, checkout, mode
+
+          def expand(s, default, aliases=None):
+              s = (s or "").strip().lower()
+              if s in ("", "all", "*"):
+                  return list(default)
+              if s in ("none", "off", "no"):
+                  return []
+              items = [x.strip() for x in s.split(",") if x.strip()]
+              if aliases:
+                  items = [aliases.get(i, i) for i in items]
+              return items
+
+          ABIS = ["armeabi-v7a", "arm64-v8a", "x86", "x86_64"]
+          ABI_ALIAS = {"arm64": "arm64-v8a", "armv7": "armeabi-v7a", "arm": "armeabi-v7a"}
+          MUSL = ["x86_64", "aarch64", "armv7", "riscv64"]
+          MUSL_ALIAS = {"arm": "armv7"}
+
+          abis = expand(os.environ["ANDROID_ABIS"], ABIS, ABI_ALIAS)
+          musl = expand(os.environ["MUSL_ARCHES"], MUSL, MUSL_ALIAS)
+          refs = [r.strip() for r in os.environ["FFMPEG_REFS"].split(",") if r.strip()]
+          variant = os.environ["VARIANT"]
+          ndk, api = os.environ["NDK"], os.environ["API"]
+
+          matrix = []
+          for ref in refs:
+              ver, checkout, mode = resolve(ref)
+              for abi in abis:
+                  matrix.append(dict(os="android", arch=abi, ver=ver, ref=checkout,
+                                     mode=mode, variant=variant, ndk=ndk, api=api))
+              for a in musl:
+                  matrix.append(dict(os="musl", arch=a, ver=ver, ref=checkout,
+                                     mode=mode, variant=variant, ndk=ndk, api=api))
+
+          if not matrix:
+              raise SystemExit("构建矩阵为空: 请检查 android_abis / musl_arches 输入")
+
+          print(json.dumps({"include": matrix}, indent=2, ensure_ascii=False))
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("matrix_json=" + json.dumps({"include": matrix}) + "\n")
+          PYEOF
+
+  build:
+    name: 编译 ${{ matrix.os }}-${{ matrix.arch }} @ ${{ matrix.ver }}
+    needs: resolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.resolve.outputs.matrix_json) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装构建依赖
+        run: |
+          set -e
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            build-essential nasm yasm cmake ninja-build meson pkg-config \
+            autoconf automake libtool autoconf-archive autopoint gettext gperf \
+            texinfo perl python3 zip unzip xz-utils curl git
+
+      - name: 缓存工具链
+        uses: actions/cache@v4
+        with:
+          path: cache
+          key: tc-${{ runner.os }}-${{ matrix.os }}-${{ matrix.arch }}-ndk${{ matrix.ndk }}-v1
+          restore-keys: |
+            tc-${{ runner.os }}-${{ matrix.os }}-${{ matrix.arch }}-
+
+      - name: 编译 FFmpeg
+        run: |
+          bash scripts/ci-build.sh \
+            --os "${{ matrix.os }}" \
+            --arch "${{ matrix.arch }}" \
+            --variant "${{ matrix.variant }}" \
+            --ref "${{ matrix.ref }}" \
+            --ver "${{ matrix.ver }}" \
+            --mode "${{ matrix.mode }}" \
+            --ndk "${{ matrix.ndk }}" \
+            --api "${{ matrix.api }}" \
+            --cache cache \
+            --out out
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-${{ matrix.ver }}-${{ matrix.os }}-${{ matrix.arch }}
+          path: out/*
+          retention-days: 30
+
+  release:
+    name: 发布 Release
+    needs: [resolve, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 下载全部产物
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ffmpeg-*
+          merge-multiple: true
+          path: rel
+
+      - name: 发布 (master → latest 滚动 / release → ffmpeg-<版本> 固定)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          cd rel
+          ls -lh
+
+          # 分组: master 产物 → 滚动 latest; 稳定版产物 → 固定 tag ffmpeg-<ver>
+          mkdir -p grp/master
+          for f in ffmpeg-*.zip ffmpeg-*.tar.xz; do
+            [ -e "$f" ] || continue
+            case "$f" in
+              ffmpeg-master-*) mv "$f" grp/master/ ;;
+              *)
+                ver=$(echo "$f" | sed -E 's/^ffmpeg-(.+)-(android|musl)-[^-]+.*$/\1/')
+                mkdir -p "grp/$ver"
+                mv "$f" "grp/$ver/"
+                ;;
+            esac
+          done
+
+          # ---- 稳定版: 固定 tag, 已存在则覆盖上传 ----
+          for d in grp/*/; do
+            name=$(basename "$d")
+            [ "$name" = master ] && continue
+            ( cd "$d" && sha256sum ./* > SHA256SUMS.txt )
+            notes="FFmpeg $name 自动构建
+
+          - Android NDK 四架构 zip: armeabi-v7a / arm64-v8a / x86 / x86_64
+          - Linux musl 四架构 tar.xz: x86_64 / aarch64 / armv7 / riscv64 (全静态二进制)
+          - 构建时间: $(date -u '+%Y-%m-%d %H:%M UTC')"
+
+            if gh release view "ffmpeg-$name" >/dev/null 2>&1; then
+              gh release upload "ffmpeg-$name" --clobber "$d"/*
+            else
+              gh release create "ffmpeg-$name" "$d"/* --title "FFmpeg $name" --notes "$notes"
+            fi
+            echo "已发布: ffmpeg-$name"
+          done
+
+          # ---- master: 滚动 latest, 先删后建 ----
+          if ls grp/master/ffmpeg-* >/dev/null 2>&1; then
+            ( cd grp/master && sha256sum ffmpeg-* > SHA256SUMS.txt )
+            gh release delete latest --cleanup-tag -y 2>/dev/null || true
+            gh release create latest grp/master/* \
+              --title "FFmpeg master 最新快照" \
+              --notes "master 分支每日自动构建 (覆盖式更新)
+
+          - Android NDK 四架构 zip: armeabi-v7a / arm64-v8a / x86 / x86_64
+          - Linux musl 四架构 tar.xz: x86_64 / aarch64 / armv7 / riscv64 (全静态二进制)
+          - 构建时间: $(date -u '+%Y-%m-%d %H:%M UTC')"
+            echo "已发布: latest (master 快照)"
+          fi

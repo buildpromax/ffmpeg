@@ -275,16 +275,22 @@ EOF
     mkdir -p "$OUT_DIR"
     local items=(include lib bin BUILD_INFO.txt)
     [ -d "$PREFIX/share" ] && items+=(share)
-    local name ext
+    local name ext binname
     if [ "$TARGET_OS" = android ]; then
         name="ffmpeg-${FF_VER}-android-${ABI}-${BUILD_VARIANT:-full}"
         ext=zip
         ( cd "$PREFIX" && zip -qr -9 "$OUT_DIR/$name.$ext" "${items[@]}" )
+        # 仅二进制包: 纯 ffmpeg/ffprobe 单文件(bin/ffmpeg 为静态链接), 无库与头文件
+        binname="ffmpeg-${FF_VER}-android-${ABI}-${BUILD_VARIANT:-full}-binonly"
+        ( cd "$PREFIX" && zip -qr -9 "$OUT_DIR/$binname.$ext" bin BUILD_INFO.txt )
     else
         name="ffmpeg-${FF_VER}-musl-${MUSL_ARCH}-${BUILD_VARIANT:-full}"
         ext=tar.xz
         ( cd "$PREFIX" && tar -cJf "$OUT_DIR/$name.$ext" "${items[@]}" )
+        # 仅二进制包: 全静态单文件, 解压即用, 无静态库/头文件
+        binname="ffmpeg-${FF_VER}-musl-${MUSL_ARCH}-${BUILD_VARIANT:-full}-binonly"
+        ( cd "$PREFIX" && tar -cJf "$OUT_DIR/$binname.$ext" bin BUILD_INFO.txt )
     fi
-    log "打包完成: $OUT_DIR/$name.$ext"
+    log "打包完成: $OUT_DIR/$name.$ext (+ 仅二进制包 $binname.$ext)"
     ls -lh "$OUT_DIR"
 }

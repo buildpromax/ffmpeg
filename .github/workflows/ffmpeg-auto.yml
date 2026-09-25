@@ -238,3 +238,29 @@ jobs:
           - 构建时间: $(date -u '+%Y-%m-%d %H:%M UTC')"
             echo "已发布: latest (master 快照)"
           fi
+
+  readme:
+    name: 自动更新 README 下载表
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 生成 README
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: python3 scripts/generate-readme.py
+
+      - name: 提交推送
+        run: |
+          if git diff --quiet -- README.md; then
+            echo "README 无变化, 跳过提交"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add README.md
+            git commit -m "docs: CI 自动更新 README 下载表 [skip ci]"
+            git push
+          fi

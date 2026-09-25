@@ -73,8 +73,15 @@ build_x264() {
     else
         xp+=(--cross-prefix="$TRIPLE-")
     fi
+    # android 32 位 x86: nasm 产物含非 PIC 绝对重定位(R_386_32), Android 禁止
+    # text reloc, lld 拒绝链接 -> 关闭手写汇编(保留 intrinsics); x86_64 为
+    # RIP 相对寻址, 天然 PIC 安全, 不受影响
+    local xa=()
+    if [ "$TARGET_OS" = android ] && [ "$FFARCH" = x86 ]; then
+        xa+=(--disable-asm)
+    fi
     ( cd "$SRC_DIR/x264" && \
-      ./configure --prefix="$PREFIX" --host="$AHOST" "${xp[@]}" \
+      ./configure --prefix="$PREFIX" --host="$AHOST" "${xp[@]}" "${xa[@]+"${xa[@]}"}" \
         --enable-static --disable-shared --enable-pic --disable-opencl \
         --extra-cflags="$CFLAGS" --extra-ldflags="-L$PREFIX/lib" && \
       amake && make install )
@@ -85,6 +92,8 @@ build_x265() {
     # arm(含 aarch64) 交叉汇编不可靠, 统一关闭; x86/x86_64 走 nasm
     local asm=ON
     case "$FFARCH" in arm|aarch64) asm=OFF ;; esac
+    # android 32 位 x86 与 arm 同理: 汇编/PIC 兼容性差, 统一关闭
+    if [ "$FFARCH" = x86 ] && [ "$TARGET_OS" = android ]; then asm=OFF; fi
     cmk "$SRC_DIR/x265/source" "$SRC_DIR/x265-build" \
         -DENABLE_SHARED=OFF -DENABLE_CLI=OFF -DENABLE_ASSEMBLY=$asm \
         -DENABLE_LIBVMAF=OFF -DENABLE_HDR10_PLUS=OFF
@@ -92,20 +101,40 @@ build_x265() {
     cmake --install "$SRC_DIR/x265-build"
 }
 
+_vpx_cfg() { # _vpx_cfg <target> <as_cmd> [extra flags...]
+    local t=$1 as_cmd=$2; shift 2
+    ( cd "$SRC_DIR/libvpx" && \
+      AS="$as_cmd" ./configure --target="$t" --prefix="$PREFIX" \
+        --disable-shared --enable-static --disable-examples --disable-tools \
+        --disable-docs --disable-unit-tests --enable-vp9-highbitdepth --enable-pic "$@" && \
+      amake && make install )
+}
+
 build_vpx() {
     get_tar_src libvpx https://github.com/webmproject/libvpx/archive/refs/tags/v1.15.0.tar.gz
-    local t
+    local t as_cmd
     if [ "$TARGET_OS" = android ]; then
         case "$FFARCH" in
             aarch64) t=arm64-android-gcc ;; arm) t=armv7-android-gcc ;;
             x86_64) t=x86_64-android-gcc ;; x86) t=x86-android-gcc ;;
         esac
         # vpx 通过环境变量 CC/AS 取编译器(vpx 1.15 已无 --sdk-path 选项)
-        ( cd "$SRC_DIR/libvpx" && \
-          AS="$CC" ./configure --target="$t" --prefix="$PREFIX" \
-            --disable-shared --enable-static --disable-examples --disable-tools \
-            --disable-docs --disable-unit-tests --enable-vp9-highbitdepth --enable-pic && \
-          amake && make install )
+        # ARM 系: .asm 为 GAS 语法, clang 可直接汇编; x86 系: .asm 为 nasm 语法,
+        # NDK 不含 nasm, 改用宿主 nasm(工作流已安装); 仍失败则 --disable-asm 兜底
+        case "$FFARCH" in
+            x86|x86_64) as_cmd=$(command -v nasm 2>/dev/null || echo nasm) ;;
+            *) as_cmd="$CC" ;;
+        esac
+        if _vpx_cfg "$t" "$as_cmd"; then return 0; fi
+        case "$FFARCH" in
+            x86|x86_64)
+                warn "vpx nasm 汇编构建失败, 降级 --disable-asm 重试"
+                rm -rf "$SRC_DIR/libvpx"
+                get_tar_src libvpx https://github.com/webmproject/libvpx/archive/refs/tags/v1.15.0.tar.gz
+                _vpx_cfg "$t" "$CC" --disable-asm
+                ;;
+            *) return 1 ;;
+        esac
     else
         case "$FFARCH" in
             x86_64) t=x86_64-linux-gcc ;; aarch64) t=arm64-linux-gcc ;;

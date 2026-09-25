@@ -71,4 +71,10 @@ EOF
 # FFmpeg 链接期附加库
 FF_EXTRA_LIBS="-landroid -lc++_static -lc++abi"
 
+# NDK 无 libstdc++(C++ 运行时为 libc++), 而 ffmpeg configure 的 gme/openmpt
+# 检查与 x265.pc 等硬编码 -lstdc++; 用链接器脚本 shim 将其映射到 NDK 静态
+# libc++ — -lstdc++ 出现在链接行的位置即为 shim 生效位置, 静态库符号顺序正确
+mkdir -p "$PREFIX/lib"
+printf 'INPUT(-lc++_static -lc++abi -lunwind)\n' > "$PREFIX/lib/libstdc++.a"
+
 log "NDK 环境: ABI=$ABI API=$ANDROID_API CC=$CC"

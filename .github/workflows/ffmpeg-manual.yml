@@ -165,6 +165,7 @@ jobs:
             --out out
 
       - name: 上传构建产物
+        if: ${{ always() && hashFiles('out/*') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: ffmpeg-${{ matrix.ver }}-${{ matrix.os }}-${{ matrix.arch }}

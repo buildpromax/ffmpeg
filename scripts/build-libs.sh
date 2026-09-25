@@ -48,7 +48,7 @@ build_openssl() {
         esac
         ( cd "$SRC_DIR/openssl" && \
           ./Configure "$t" -D__ANDROID_API__="$ANDROID_API" no-shared no-tests \
-            --prefix="$PREFIX" && \
+            --libdir=lib --prefix="$PREFIX" && \
           amake && make install_sw install_ssldirs )
     else
         case "$FFARCH" in
@@ -57,7 +57,7 @@ build_openssl() {
         esac
         ( cd "$SRC_DIR/openssl" && \
           CC="$CC" CXX="$CXX" AR="$AR" RANLIB="$RANLIB" \
-          ./Configure "$t" no-shared no-tests --prefix="$PREFIX" && \
+          ./Configure "$t" no-shared no-tests --libdir=lib --prefix="$PREFIX" && \
           amake && make install_sw install_ssldirs )
     fi
 }

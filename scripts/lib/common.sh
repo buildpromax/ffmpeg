@@ -101,6 +101,7 @@ cmk() { # cmk <srcdir> <builddir> [extra cmake flags...]
     cmake -S "$src" -B "$build" \
         -DCMAKE_TOOLCHAIN_FILE="$CMAKE_TCF" \
         -DCMAKE_INSTALL_PREFIX="$PREFIX" \
+        -DCMAKE_INSTALL_LIBDIR=lib \
         -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_SHARED_LIBS=OFF \
         "${extra[@]}" "$@" || die "cmake 配置失败: $src"

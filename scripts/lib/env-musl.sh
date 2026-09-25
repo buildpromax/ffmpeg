@@ -26,6 +26,7 @@ case "$MUSL_ARCH" in
         TRIPLE=arm-linux-musleabihf; FFARCH=arm;    FFCPU=armv7-a; MESON_ARCH=arm;     CMAKE_PROC=armv7-a
         PRIMARY="https://github.com/userdocs/qbt-musl-cross-make/releases/latest/download/x86_64-armv7l-linux-musleabihf.tar.xz"
         SECONDARY="https://musl.cc/arm-linux-musleabihf-cross.tgz"
+        GCC_GLOB="*linux-musleabihf-gcc"   # userdocs 为 armv7l-*, musl.cc 为 arm-*, 下载后动态探测
         ;;
     riscv64)
         TRIPLE=riscv64-linux-musl;  FFARCH=riscv64; FFCPU=;        MESON_ARCH=riscv64; CMAKE_PROC=riscv64
@@ -34,12 +35,11 @@ case "$MUSL_ARCH" in
         ;;
     *) die "未知 musl 架构: $MUSL_ARCH" ;;
 esac
-AHOST=$TRIPLE
-export TRIPLE FFARCH FFCPU AHOST MESON_ARCH CMAKE_PROC
+GCC_GLOB="${GCC_GLOB:-$TRIPLE-gcc}"
 
 # ---------- 获取工具链(带缓存) ----------
 TC_ROOT="$CACHE_DIR/musl-$MUSL_ARCH"
-_find_gcc() { find "$TC_ROOT" \( -type f -o -type l \) -name "$TRIPLE-gcc" 2>/dev/null | head -1; }
+_find_gcc() { find "$TC_ROOT" \( -type f -o -type l \) -name "$GCC_GLOB" 2>/dev/null | head -1; }
 if [ -z "$(_find_gcc)" ]; then
     log "下载 musl 交叉工具链: $MUSL_ARCH"
     rm -rf "$TC_ROOT" "$CACHE_DIR/_tc-$MUSL_ARCH.tb"
@@ -55,13 +55,18 @@ if [ -z "$(_find_gcc)" ]; then
     mkdir -p "$TC_ROOT"
     tar -xf "$CACHE_DIR/_tc-$MUSL_ARCH.tb" -C "$TC_ROOT"
     rm -f "$CACHE_DIR/_tc-$MUSL_ARCH.tb"
-    # 定位 bin 目录
-    _BIN=$(_find_gcc)
-    [ -n "$_BIN" ] || die "工具链解压后未找到 $TRIPLE-gcc"
-    chmod +x "$(dirname "$_BIN")"/* 2>/dev/null || true
 fi
 
-_TC_BIN=$(dirname "$(_find_gcc)")
+# 下载后动态探测真实三元组(armv7: userdocs=armv7l-linux-musleabihf / musl.cc=arm-linux-musleabihf)
+_BIN=$(_find_gcc)
+[ -n "$_BIN" ] || die "工具链解压后未找到 $GCC_GLOB"
+TRIPLE=$(basename "$_BIN")
+TRIPLE=${TRIPLE%-gcc}
+AHOST=$TRIPLE
+export TRIPLE FFARCH FFCPU AHOST MESON_ARCH CMAKE_PROC
+chmod +x "$(dirname "$_BIN")"/* 2>/dev/null || true
+
+_TC_BIN=$(dirname "$_BIN")
 export PATH="$_TC_BIN:$PATH"
 
 export CC="$TRIPLE-gcc"

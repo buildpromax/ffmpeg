@@ -27,6 +27,8 @@ AHOST=${TRIPLE%%-*}-linux-android
 [ "$ABI" = armeabi-v7a ] && AHOST=arm-linux-androideabi
 
 export TRIPLE FFARCH FFCPU AHOST MESON_ARCH CMAKE_PROC
+# NDK clang 必须在 PATH 中(openssl android Configure 等依赖)
+export PATH="$_TC/bin:$PATH"
 export CC="$_TC/bin/${TRIPLE}${ANDROID_API}-clang"
 export CXX="$_TC/bin/${TRIPLE}${ANDROID_API}-clang++"
 export AR="$_TC/bin/llvm-ar"

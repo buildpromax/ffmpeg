@@ -107,7 +107,9 @@ ninstall() { ninja -C "$1" install || die "ninja install 失败: $1"; }
 # ---------- lib registry ----------
 
 run_lib() { # run_lib <name> [required|optional]
-    local name=$1 mode=${2:-required} fn="build_${name//-/_}"
+    local name=$1
+    local mode=${2:-required}
+    local fn="build_${name//-/_}"
     grep -qx "$name" "$LIBS_OK_FILE" && { log "跳过 $name (已完成)"; return 0; }
     if ! declare -F "$fn" >/dev/null 2>&1; then
         if [ "$mode" = optional ]; then warn "$name 无构建配方，跳过"; return 0; fi

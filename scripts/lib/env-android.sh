@@ -90,11 +90,12 @@ if [ -d "$_VKH_DIR/include/vulkan" ]; then
 fi
 
 # ---------- FFmpeg 链接期附加库 ----------
-# -lm: gme/soxr/webp/x265/zimg 等静态库引用 libm 但 .pc 未声明, NDK 不会自动补
+# -lm: gme/soxr/webp/x265/zimg 等静态库引用 libm 但 .pc 未声明, NDK 不自动补
+# -llog: vmaf 等引用 __android_log_write, 共享库链接需要 liblog
 # -lc++_static -lc++abi: NDK r29 起完整静态 C++ 运行时(位于 per-triple 无版本目录),
 #   全量静态链接进产物, 不引入 libc++_shared.so 依赖
 # -landroid: JNI/MediaCodec 平台支持
-FF_EXTRA_LIBS="-landroid -lm -lc++_static -lc++abi"
+FF_EXTRA_LIBS="-landroid -lm -llog -lc++_static -lc++abi"
 
 # -lstdc++ 重定向: 各外部库 .pc 普遍硬编码 -lstdc++, 而 lld 对 -l 搜索同名 .so
 # 优先于 .a, sysroot 的 libstdc++.so 是极简 stub(缺完整 libc++); 在 $PREFIX 前置

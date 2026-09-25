@@ -163,7 +163,8 @@ build_vpx() {
 build_aom() {
     get_tar_src aom \
         https://aomedia.googlesource.com/aom/+archive/refs/tags/v3.9.1.tar.gz \
-        https://gitlab.com/AOMediaCodec/aom/-/archive/v3.9.1/aom-v3.9.1.tar.gz
+        https://gitlab.com/AOMediaCodec/aom/-/archive/v3.9.1/aom-v3.9.1.tar.gz \
+        https://github.com/m-ab-s/aom/archive/refs/tags/v3.9.1.tar.gz
     cmk "$SRC_DIR/aom" "$SRC_DIR/aom-build" \
         -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_EXAMPLES=OFF \
         -DENABLE_TOOLS=OFF -DENABLE_STATS=OFF
@@ -190,10 +191,10 @@ build_svtav1() {
 
 build_xvid() {
     get_tar_src xvid https://downloads.xvid.com/downloads/xvidcore-1.3.7.tar.gz
-    # tar 包顶层目录历史上为 xvidcore 或 xvidcore-<ver>, 动态定位 build/gnu
+    # 1.3.7 的构建目录为 build/generic(旧版为 build/gnu), 动态定位
     local gnu
-    gnu=$(find "$SRC_DIR/xvid" -type d -path '*/build/gnu' 2>/dev/null | head -1)
-    [ -n "$gnu" ] || die "xvid build/gnu 目录未找到"
+    gnu=$(find "$SRC_DIR/xvid" -type d \( -path '*/build/generic' -o -path '*/build/gnu' \) 2>/dev/null | head -1)
+    [ -n "$gnu" ] || die "xvid build/generic 目录未找到"
     ( cd "$gnu" && \
       CC="$CC" RANLIB="$RANLIB" AR="$AR" \
       ./configure --host="$AHOST" --prefix="$PREFIX" --disable-assembly && \
@@ -298,7 +299,7 @@ build_expat() {
 build_fontconfig() {
     get_tar_src fontconfig https://gitlab.freedesktop.org/fontconfig/fontconfig/-/archive/2.15.0/fontconfig-2.15.0.tar.gz
     mson "$SRC_DIR/fontconfig" "$SRC_DIR/fontconfig-build" \
-        -Dtests=disabled -Dtools=false -Dcache-build=false -Ddocs=false
+        -Dtests=disabled -Dtools=disabled -Dcache-build=false
     ninstall "$SRC_DIR/fontconfig-build"
 }
 
@@ -453,7 +454,7 @@ build_speexdsp() {
 
 build_rubberband() {
     get_tar_src rubberband https://github.com/Breakfastquay/rubberband/archive/refs/tags/v3.3.0.tar.gz
-    mson "$SRC_DIR/rubberband" "$SRC_DIR/rubberband-build" -Dtests=disabled
+    mson "$SRC_DIR/rubberband" "$SRC_DIR/rubberband-build" -Dtests=disabled -Djni=disabled
     ninstall "$SRC_DIR/rubberband-build"
 }
 

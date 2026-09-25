@@ -124,6 +124,7 @@ cmk() { # cmk <srcdir> <builddir> [extra cmake flags...]
         -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_SHARED_LIBS=OFF \
         -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         "${extra[@]}" "$@" || die "cmake 配置失败: $src"
 }
 

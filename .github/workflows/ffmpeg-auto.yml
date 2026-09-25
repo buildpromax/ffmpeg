@@ -186,6 +186,7 @@ jobs:
       - name: 发布 (master → latest 滚动 / release → ffmpeg-<版本> 固定)
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -e
           cd rel

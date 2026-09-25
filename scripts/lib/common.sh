@@ -51,12 +51,22 @@ unpack() { # unpack <tarball> <destdir>
     fi
 }
 
-get_tar_src() { # get_tar_src <name> <url>
-    local name=$1 url=$2 tb="$DL_DIR/$1.tb"
+get_tar_src() { # get_tar_src <name> <url> [fallback-url...]
+    local name=$1; shift
     [ -d "$SRC_DIR/$name" ] && { log "缓存源码: $name"; return 0; }
-    fetch "$url" "$tb"
-    unpack "$tb" "$SRC_DIR/$name"
-    log "源码就绪: $name"
+    local url attempt
+    for url in "$@"; do
+        for attempt in 1 2 3; do
+            if fetch "$url" "$DL_DIR/$name.tb" 2>/dev/null; then
+                unpack "$DL_DIR/$name.tb" "$SRC_DIR/$name" && { log "源码就绪: $name"; return 0; }
+            fi
+            warn "下载失败(第${attempt}次): $url"
+            rm -f "$DL_DIR/$name.tb"
+            sleep $((attempt * 5))
+        done
+        [ $# -gt 1 ] && warn "切换备用源..."
+    done
+    die "所有源均下载失败: $name"
 }
 
 get_git_src() { # get_git_src <name> <url> [ref]

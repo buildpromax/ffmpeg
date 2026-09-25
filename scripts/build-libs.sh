@@ -120,7 +120,9 @@ build_vpx() {
 }
 
 build_aom() {
-    get_tar_src aom https://aomedia.googlesource.com/aom/+archive/refs/tags/v3.9.1.tar.gz
+    get_tar_src aom \
+        https://aomedia.googlesource.com/aom/+archive/refs/tags/v3.9.1.tar.gz \
+        https://gitlab.com/AOMediaCodec/aom/-/archive/v3.9.1/aom-v3.9.1.tar.gz
     cmk "$SRC_DIR/aom" "$SRC_DIR/aom-build" \
         -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_EXAMPLES=OFF \
         -DENABLE_TOOLS=OFF -DENABLE_STATS=OFF
@@ -230,7 +232,8 @@ build_ass() {
     get_tar_src libass https://github.com/libass/libass/releases/download/0.17.3/libass-0.17.3.tar.xz
     ( cd "$SRC_DIR/libass" && \
       ./configure --host="$AHOST" --prefix="$PREFIX" \
-        --disable-shared --enable-static --disable-testbuild && \
+        --disable-shared --enable-static --disable-testbuild \
+        --disable-require-system-font-provider && \
       amake && make install )
 }
 

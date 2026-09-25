@@ -139,6 +139,7 @@ ffmpeg_main() {
     fi
 
     local ok=0
+    local attempt_used=0
     local -a _CUR_ATTEMPT
     local i
     for i in 1 2 3 4; do
@@ -148,8 +149,20 @@ ffmpeg_main() {
             3) _CUR_ATTEMPT=("${A3[@]}") ;;
             4) _CUR_ATTEMPT=("${A4[@]}") ;;
         esac
-        if ffmpeg_try_configure "$i"; then ok=1; log "configure 成功 (方案 $i)"; break; fi
-        warn "configure 方案 $i 失败, 降级重试 (日志: $WORK_DIR/_ffmpeg-config.log)"
+        if ffmpeg_try_configure "$i"; then
+            ok=1; attempt_used=$i
+            log "configure 成功 (方案 $i)"
+            if [ "$i" -ge 3 ]; then
+                warn "!!! configure 使用了降级方案 $i, 产物可能缺少外部库 !!!"
+                warn "!!! 失败详情(方案1日志尾部):"; tail -25 "$WORK_DIR/_ffmpeg-config-1.log" 2>/dev/null || true
+            fi
+            break
+        fi
+        cp "$WORK_DIR/_ffmpeg-config.log" "$WORK_DIR/_ffmpeg-config-$i.log" 2>/dev/null || true
+        warn "configure 方案 $i 失败, 降级重试 (日志: $WORK_DIR/_ffmpeg-config-$i.log)"
+        echo "----- 方案 $i 失败日志尾部 -----"
+        tail -n 15 "$WORK_DIR/_ffmpeg-config-$i.log" 2>/dev/null || true
+        echo "--------------------------------"
     done
     [ "$ok" = 1 ] || die "ffmpeg configure 全部方案失败, 请查看 $WORK_DIR/_ffmpeg-config.log"
 
@@ -181,14 +194,19 @@ ffmpeg_main() {
 FFmpeg 版本: $FF_VER
 源码引用:    $ref
 变体:        ${BUILD_VARIANT:-full}
+configure 方案: $attempt_used (1=全量 4=纯净降级)
 目标平台:    $TARGET_OS ($([ "$TARGET_OS" = android ] && echo "ABI=${ABI:-} API=${ANDROID_API:-} NDK=${NDK_VERSION:-}" || echo "musl ${MUSL_ARCH:-}"))
-启用外部库:  $(paste -sd, "$LIBS_OK_FILE" 2>/dev/null || echo none)
+编译的外部库: $(paste -sd, "$LIBS_OK_FILE" 2>/dev/null || echo none)
 跳过的可选库: $(paste -sd, "$LIBS_FAILED_FILE" 2>/dev/null || echo none)
 构建日期:    $(date -u '+%Y-%m-%d %H:%M UTC')
 构建地址:    ${GITHUB_SERVER_URL:-local}/${GITHUB_REPOSITORY:-build}/actions/runs/${GITHUB_RUN_ID:-0}
 
 $verinfo
 EOF
+    # 方案降级时, 产物与库清单不符, 明确告警
+    if [ "$attempt_used" -ge 3 ]; then
+        echo "!!! 警告: configure 使用降级方案 $attempt_used, 上述外部库可能未编入 ffmpeg, 见 CI 日志 !!!" >> "$PREFIX/BUILD_INFO.txt"
+    fi
 
     # ---------- 打包 ----------
     mkdir -p "$OUT_DIR"

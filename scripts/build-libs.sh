@@ -131,7 +131,7 @@ build_aom() {
 build_dav1d() {
     get_tar_src dav1d https://github.com/videolan/dav1d/archive/refs/tags/1.4.3.tar.gz
     local extra=()
-    [ "$FFARCH" = arm ] && extra=(-Dasm=disabled)
+    [ "$FFARCH" = arm ] && extra=(-Denable_asm=false)   # 32位 arm 交叉汇编不可靠
     mson "$SRC_DIR/dav1d" "$SRC_DIR/dav1d-build" "${extra[@]+"${extra[@]}"}"
     ninstall "$SRC_DIR/dav1d-build"
 }
@@ -215,7 +215,7 @@ build_freetype() {
 
 build_fribidi() {
     get_tar_src fribidi https://github.com/fribidi/fribidi/releases/download/v1.0.16/fribidi-1.0.16.tar.xz
-    mson "$SRC_DIR/fribidi" "$SRC_DIR/fribidi-build" -Dtests=disabled -Ddocs=disabled
+    mson "$SRC_DIR/fribidi" "$SRC_DIR/fribidi-build" -Dtests=false -Ddocs=false
     ninstall "$SRC_DIR/fribidi-build"
 }
 
@@ -243,7 +243,7 @@ build_expat() {
 build_fontconfig() {
     get_tar_src fontconfig https://gitlab.freedesktop.org/fontconfig/fontconfig/-/archive/2.15.0/fontconfig-2.15.0.tar.gz
     mson "$SRC_DIR/fontconfig" "$SRC_DIR/fontconfig-build" \
-        -Dtests=disabled -Dtools=disabled -Dcache-build=disabled
+        -Dtests=false -Dtools=false -Dcache-build=false
     ninstall "$SRC_DIR/fontconfig-build"
 }
 
@@ -386,7 +386,7 @@ build_speexdsp() {
 
 build_rubberband() {
     get_tar_src rubberband https://github.com/Breakfastquay/rubberband/archive/refs/tags/v3.3.0.tar.gz
-    mson "$SRC_DIR/rubberband" "$SRC_DIR/rubberband-build" -Dtests=disabled
+    mson "$SRC_DIR/rubberband" "$SRC_DIR/rubberband-build" -Dtests=false
     ninstall "$SRC_DIR/rubberband-build"
 }
 

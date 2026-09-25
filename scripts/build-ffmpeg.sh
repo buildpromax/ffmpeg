@@ -11,7 +11,8 @@
 
 FF_BASE_FLAGS=()
 FF_LIB_FLAGS=()
-FF_EXTRA_LIBS=""
+# 注意: 此处不得初始化 FF_EXTRA_LIBS —— env-*.sh 可能预置了 android 链接库
+# (-landroid -lm -lc++_static -lc++abi), ffmpeg_main 内以 ${FF_EXTRA_LIBS:-} 保留
 
 # lib名/ffmpeg侧名 -> ffmpeg 开关 (供 _lib_flags 与 configure 自动剔除共用)
 _ff_key_flags() {
@@ -83,8 +84,28 @@ ffmpeg_src() {
 
 ffmpeg_try_configure() { # $1=尝试序号; 成功返回 0, 日志在 _ffmpeg-config.log
     log "ffmpeg configure: 方案 $1"
+    rm -f "$SRC_DIR/ffmpeg/ffbuild/config.log"
     ( cd "$SRC_DIR/ffmpeg" && ./configure "${_CUR_ATTEMPT[@]}" ) \
         > "$WORK_DIR/_ffmpeg-config.log" 2>&1
+}
+
+# 从失败日志提取首个不可用组件名(不使用管道, 避免 pipefail 误杀脚本)
+_ffmpeg_pick_bad() { # $1=configure stdout 日志; 输出: 组件名(可为空)
+    local f=$1 line
+    line=$(grep -oE 'ERROR: [A-Za-z0-9_.+-]+( >= [0-9.]+)? not found' "$f" 2>/dev/null | tail -1 || true)
+    [ -n "$line" ] || line=$(grep -oE 'ERROR: [A-Za-z0-9_.+-]+ requested but not found' "$f" 2>/dev/null | tail -1 || true)
+    [ -n "$line" ] || return 0
+    printf '%s' "$line" | sed -E 's/^ERROR: ([A-Za-z0-9_.+-]+).*/\1/'
+}
+
+# 打印 ffbuild/config.log 尾部(含真实失败命令与编译/链接错误)
+_ffmpeg_dump_cfglog() {
+    local cfg="$SRC_DIR/ffmpeg/ffbuild/config.log"
+    if [ -f "$cfg" ]; then
+        echo "----- ffbuild/config.log 尾部(失败检查的真实错误) -----"
+        tail -n 30 "$cfg"
+        echo "----------------------------------------"
+    fi
 }
 
 ffmpeg_main() {
@@ -128,7 +149,8 @@ ffmpeg_main() {
 
     # ---------- 外部库参数 ----------
     FF_LIB_FLAGS=()
-    FF_EXTRA_LIBS=""
+    # 保留 env-*.sh 预置的链接库(android: -landroid -lc++_static -lc++abi), 只追加 C++ 库标志
+    FF_EXTRA_LIBS="${FF_EXTRA_LIBS:-}"
     local lib
     while read -r lib; do [ -n "$lib" ] && _lib_flags "$lib"; done < "$LIBS_OK_FILE"
 
@@ -161,9 +183,7 @@ ffmpeg_main() {
             break
         fi
         cp "$WORK_DIR/_ffmpeg-config.log" "$WORK_DIR/_ffmpeg-config-$i.log" 2>/dev/null || true
-        bad=$(grep -oE 'ERROR: [A-Za-z0-9_.+-]+( >= [0-9.]+)? not found' \
-              "$WORK_DIR/_ffmpeg-config-$i.log" 2>/dev/null | tail -1 \
-              | sed -E 's/^ERROR: ([A-Za-z0-9_.+-]+).*/\1/')
+        bad=$(_ffmpeg_pick_bad "$WORK_DIR/_ffmpeg-config-$i.log")
         _drop=()
         if [ -n "$bad" ]; then
             read -r -a _drop <<< "$(_ff_key_flags "$bad")"
@@ -172,6 +192,7 @@ ffmpeg_main() {
             warn "configure 失败且无法定位可剔除项(${bad:-原因未知}), 停止重试"
             echo "----- 失败日志尾部 -----"
             tail -n 15 "$WORK_DIR/_ffmpeg-config-$i.log" 2>/dev/null || true
+            _ffmpeg_dump_cfglog
             echo "--------------------------------"
             break
         fi
@@ -188,6 +209,7 @@ ffmpeg_main() {
         warn "configure 失败: $bad 不可用, 已剔除对应开关并重试 (第 $i 次)"
         echo "----- 第 $i 次失败日志尾部 -----"
         tail -n 10 "$WORK_DIR/_ffmpeg-config-$i.log" 2>/dev/null || true
+        _ffmpeg_dump_cfglog
         echo "--------------------------------"
     done
     if [ "$ok" != 1 ]; then

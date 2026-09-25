@@ -20,7 +20,7 @@ libs_main() {
     [ "$variant" = ultimate ] || return 0
 
     # ---- ultimate 档: 可选库(对齐 Termux 全功能配置, 失败自动跳过) ----
-    local OPTIONAL="lcms2 opencore-amr vo-amrwbenc theora expat fontconfig ssh srt bluray dvdread dvdnav vidstab vmaf zimg mysofa openmpt gme svtav1 xvid zmq speexdsp rubberband jxl"
+    local OPTIONAL="lcms2 opencore-amr vo-amrwbenc theora expat fontconfig ssh srt bluray dvdread dvdnav vidstab vmaf zimg mysofa mpg123 openmpt gme svtav1 xvid zmq speexdsp rubberband jxl"
     for lib in $OPTIONAL; do run_lib "$lib" optional; done
 
     if [ -s "$LIBS_FAILED_FILE" ]; then
@@ -178,7 +178,11 @@ build_svtav1() {
 
 build_xvid() {
     get_tar_src xvid https://downloads.xvid.com/downloads/xvidcore-1.3.7.tar.gz
-    ( cd "$SRC_DIR/xvid/build/gnu" && \
+    # tar 包顶层目录历史上为 xvidcore 或 xvidcore-<ver>, 动态定位 build/gnu
+    local gnu
+    gnu=$(find "$SRC_DIR/xvid" -type d -path '*/build/gnu' 2>/dev/null | head -1)
+    [ -n "$gnu" ] || die "xvid build/gnu 目录未找到"
+    ( cd "$gnu" && \
       CC="$CC" RANLIB="$RANLIB" AR="$AR" \
       ./configure --host="$AHOST" --prefix="$PREFIX" --disable-assembly && \
       amake && make install )
@@ -221,6 +225,7 @@ build_vorbis() {
 
 build_theora() {
     get_tar_src libtheora https://downloads.xiph.org/releases/theora/libtheora-1.1.1.tar.bz2
+    fix_cfg_scripts "$SRC_DIR/libtheora"   # 2011 年的 config.sub 不认 android/musl 三元组
     acon "$SRC_DIR/libtheora" --disable-asm --disable-examples --disable-spec && \
     ( cd "$SRC_DIR/libtheora" && amake && make install )
 }
@@ -233,6 +238,7 @@ build_opencore_amr() {
 
 build_vo_amrwbenc() {
     get_tar_src vo-amrwbenc https://sourceforge.net/projects/opencore-amr/files/vo-amrwbenc/vo-amrwbenc-0.1.3.tar.gz/download
+    fix_cfg_scripts "$SRC_DIR/vo-amrwbenc"   # 2014 年的 config.sub 不认 musl 三元组
     acon "$SRC_DIR/vo-amrwbenc" && \
     ( cd "$SRC_DIR/vo-amrwbenc" && amake && make install )
 }
@@ -280,7 +286,7 @@ build_expat() {
 build_fontconfig() {
     get_tar_src fontconfig https://gitlab.freedesktop.org/fontconfig/fontconfig/-/archive/2.15.0/fontconfig-2.15.0.tar.gz
     mson "$SRC_DIR/fontconfig" "$SRC_DIR/fontconfig-build" \
-        -Dtests=false -Dtools=false -Dcache-build=false
+        -Dtests=disabled -Dtools=false -Dcache-build=false -Ddocs=false
     ninstall "$SRC_DIR/fontconfig-build"
 }
 
@@ -300,7 +306,9 @@ build_ssh() {
     cmk "$SRC_DIR/libssh" "$SRC_DIR/libssh-build" \
         -DWITH_SERVER=OFF -DWITH_ZLIB=ON -DWITH_EXAMPLES=OFF \
         -DUNIT_TESTING=OFF -DWITH_GCRYPT=OFF -DWITH_MBEDTLS=OFF \
-        -DWITH_NACL=OFF -DOPENSSL_ROOT_DIR="$PREFIX"
+        -DWITH_NACL=OFF -DOPENSSL_ROOT_DIR="$PREFIX" \
+        -DOPENSSL_USE_STATIC_LIBS=ON \
+        -DCMAKE_FIND_ROOT_PATH="$PREFIX"
     cmake --build "$SRC_DIR/libssh-build" -j "$JOBS"
     cmake --install "$SRC_DIR/libssh-build"
 }
@@ -393,9 +401,19 @@ build_zimg() {
 build_mysofa() {
     get_tar_src mysofa https://github.com/hoene/libmysofa/archive/refs/tags/v1.3.2.tar.gz
     cmk "$SRC_DIR/mysofa" "$SRC_DIR/mysofa-build" \
-        -DBUILD_TESTS=OFF -DBUILD_SHARED_LIBS=OFF
+        -DBUILD_TESTS=OFF -DBUILD_SHARED_LIBS=OFF \
+        -DMATH=m   # musl 下 CMAKE_FIND_ROOT_PATH 限制导致 find_library(m) 失败, 直接给 -lm
     cmake --build "$SRC_DIR/mysofa-build" -j "$JOBS"
     cmake --install "$SRC_DIR/mysofa-build"
+}
+
+build_mpg123() {   # libopenmpt 的硬依赖
+    get_tar_src mpg123 https://sourceforge.net/projects/mpg123/files/mpg123/1.32.10/mpg123-1.32.10.tar.bz2/download
+    ( cd "$SRC_DIR/mpg123" && \
+      ./configure --host="$AHOST" --prefix="$PREFIX" \
+        --disable-shared --enable-static --with-cpu=generic \
+        --disable-components --enable-libmpg123 && \
+      amake && make install )
 }
 
 build_openmpt() {
@@ -423,15 +441,21 @@ build_speexdsp() {
 
 build_rubberband() {
     get_tar_src rubberband https://github.com/Breakfastquay/rubberband/archive/refs/tags/v3.3.0.tar.gz
-    mson "$SRC_DIR/rubberband" "$SRC_DIR/rubberband-build" -Dtests=false
+    mson "$SRC_DIR/rubberband" "$SRC_DIR/rubberband-build" -Dtests=disabled
     ninstall "$SRC_DIR/rubberband-build"
 }
 
 build_jxl() {
-    get_tar_src libjxl https://github.com/libjxl/libjxl/archive/refs/tags/v0.10.2.tar.gz
-    mson "$SRC_DIR/libjxl" "$SRC_DIR/libjxl-build" \
-        -Dtests=disabled -Dexamples=disabled -Dtools=disabled \
-        -Dmanpages=disabled -Dbenchmark=disabled -Dopenexr=disabled \
-        -Djdk=disabled -Dsdl=disabled
-    ninstall "$SRC_DIR/libjxl-build"
+    # v0.10 起 libjxl 移除了 meson 支持, 改用 CMake;
+    # GitHub 归档 tar 包不含 third_party(highway 等) 子模块, 须 git clone --recursive
+    get_git_src libjxl https://github.com/libjxl/libjxl.git v0.10.2 --recursive
+    cmk "$SRC_DIR/libjxl" "$SRC_DIR/libjxl-build" \
+        -DBUILD_TESTING=OFF -DJPEGXL_ENABLE_TESTS=OFF \
+        -DJPEGXL_ENABLE_EXAMPLES=OFF -DJPEGXL_ENABLE_TOOLS=OFF \
+        -DJPEGXL_ENABLE_MANPAGES=OFF -DJPEGXL_ENABLE_BENCHMARK=OFF \
+        -DJPEGXL_ENABLE_OPENEXR=OFF -DJPEGXL_ENABLE_JNI=OFF \
+        -DJPEGXL_ENABLE_SJPEG=OFF -DJPEGXL_ENABLE_OPENJPEG=OFF \
+        -DJPEGXL_ENABLE_SKCMS=ON
+    cmake --build "$SRC_DIR/libjxl-build" -j "$JOBS"
+    cmake --install "$SRC_DIR/libjxl-build"
 }

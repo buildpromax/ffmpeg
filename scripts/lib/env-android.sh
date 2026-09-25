@@ -68,13 +68,38 @@ cpu = '${FFCPU:-$MESON_ARCH}'
 endian = 'little'
 EOF
 
-# FFmpeg 链接期附加库
-FF_EXTRA_LIBS="-landroid -lc++_static -lc++abi"
+# ---------- Vulkan 头文件 ----------
+# FFmpeg 9 的 --enable-vulkan 要求 VK_HEADER_VERSION >= 277,
+# NDK 自带头(r29=275)不满足 -> 安装新版 Vulkan-Headers 到 $PREFIX(header-only)
+_VKH_VER=1.3.290
+_VKH_DIR="$CACHE_DIR/tools/vulkan-headers-$_VKH_VER"
+if [ ! -d "$_VKH_DIR" ]; then
+    mkdir -p "$_VKH_DIR"
+    log "安装 Vulkan-Headers $_VKH_VER (NDK 自带头低于 FFmpeg 9 要求)"
+    curl -fL --retry 3 --retry-delay 8 --connect-timeout 30 \
+        -o "$CACHE_DIR/_vkh.tar.gz" \
+        "https://github.com/KhronosGroup/Vulkan-Headers/archive/refs/tags/v$_VKH_VER.tar.gz" \
+    && tar -xzf "$CACHE_DIR/_vkh.tar.gz" -C "$_VKH_DIR" --strip-components=1 \
+    && rm -f "$CACHE_DIR/_vkh.tar.gz" \
+    || { rm -rf "$_VKH_DIR"; warn "Vulkan-Headers 安装失败, --enable-vulkan 可能被 configure 拒绝"; }
+fi
+if [ -d "$_VKH_DIR/include/vulkan" ]; then
+    mkdir -p "$PREFIX/include"
+    cp -r "$_VKH_DIR/include/vulkan" "$_VKH_DIR/include/vk_video" "$PREFIX/include/" 2>/dev/null \
+        || cp -r "$_VKH_DIR/include/vulkan" "$PREFIX/include/"
+fi
 
-# NDK 无 libstdc++(C++ 运行时为 libc++), 而 ffmpeg configure 的 gme/openmpt
-# 检查与 x265.pc 等硬编码 -lstdc++; 用链接器脚本 shim 将其映射到 NDK 静态
-# libc++ — -lstdc++ 出现在链接行的位置即为 shim 生效位置, 静态库符号顺序正确
+# ---------- FFmpeg 链接期附加库 ----------
+# -lm: gme/soxr/webp/x265/zimg 等静态库引用 libm 但 .pc 未声明, NDK 不会自动补
+# -lc++_static -lc++abi: NDK r29 起完整静态 C++ 运行时(位于 per-triple 无版本目录),
+#   全量静态链接进产物, 不引入 libc++_shared.so 依赖
+# -landroid: JNI/MediaCodec 平台支持
+FF_EXTRA_LIBS="-landroid -lm -lc++_static -lc++abi"
+
+# -lstdc++ 重定向: 各外部库 .pc 普遍硬编码 -lstdc++, 而 lld 对 -l 搜索同名 .so
+# 优先于 .a, sysroot 的 libstdc++.so 是极简 stub(缺完整 libc++); 在 $PREFIX 前置
+# 一个同名 .so 链接脚本, 将 -lstdc++ 重定向到 NDK 静态 libc++(脚本会先于 sysroot 命中)
 mkdir -p "$PREFIX/lib"
-printf 'INPUT(-lc++_static -lc++abi -lunwind)\n' > "$PREFIX/lib/libstdc++.a"
+printf 'INPUT(-lc++_static -lc++abi)\n' > "$PREFIX/lib/libstdc++.so"
 
 log "NDK 环境: ABI=$ABI API=$ANDROID_API CC=$CC"

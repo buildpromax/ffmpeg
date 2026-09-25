@@ -69,15 +69,34 @@ get_tar_src() { # get_tar_src <name> <url> [fallback-url...]
     die "所有源均下载失败: $name"
 }
 
-get_git_src() { # get_git_src <name> <url> [ref]
-    local name=$1 url=$2 ref=${3:-}
+get_git_src() { # get_git_src <name> <url> [ref] [--recursive]
+    local name=$1 url=$2 ref=${3:-} rec=0
+    [ "${4:-}" = --recursive ] && rec=1
     [ -d "$SRC_DIR/$name" ] && { log "缓存源码: $name"; return 0; }
-    if [ -n "$ref" ]; then
-        git clone --depth 1 --branch "$ref" "$url" "$SRC_DIR/$name" || die "git clone 失败: $url ($ref)"
-    else
-        git clone --depth 1 "$url" "$SRC_DIR/$name" || die "git clone 失败: $url"
-    fi
+    local -a args=(--depth 1)
+    [ -n "$ref" ] && args+=(--branch "$ref")
+    [ "$rec" = 1 ] && args+=(--recursive --shallow-submodules)
+    git clone "${args[@]}" "$url" "$SRC_DIR/$name" || die "git clone 失败: $url ($ref)"
     log "源码就绪: $name"
+}
+
+# 刷新远古 autotools 包的 config.sub/config.guess
+# (2011 前的版本不认识 aarch64-linux-android / x86_64-linux-musl 等新三元组)
+fix_cfg_scripts() { # fix_cfg_scripts <srcdir>
+    local dir=$1 f base="$CACHE_DIR/tools"
+    [ -f "$dir/config.sub" ] || return 0
+    mkdir -p "$base"
+    for f in config.sub config.guess; do
+        if [ ! -s "$base/$f" ]; then
+            curl -fL --retry 3 --connect-timeout 30 -o "$base/$f" \
+                "https://raw.githubusercontent.com/gcc-mirror/gcc/master/$f" \
+            || { warn "config 脚本刷新失败($f), 使用原始文件"; return 0; }
+        fi
+        head -c40 "$base/$f" | grep -q "shell script" || { warn "$f 内容异常, 使用原始文件"; return 0; }
+    done
+    cp -f "$base/config.sub" "$dir/config.sub"
+    cp -f "$base/config.guess" "$dir/config.guess"
+    chmod +x "$dir/config.sub" "$dir/config.guess"
 }
 
 # ---------- build helpers ----------
@@ -104,6 +123,7 @@ cmk() { # cmk <srcdir> <builddir> [extra cmake flags...]
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_SHARED_LIBS=OFF \
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
         "${extra[@]}" "$@" || die "cmake 配置失败: $src"
 }
 

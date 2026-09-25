@@ -86,6 +86,7 @@ ffmpeg_main() {
         --enable-gpl --enable-version3
         --disable-doc --disable-debug
         --enable-cross-compile
+        --pkg-config-flags=--static
         --arch="$FFARCH"
         --cc="$CC" --cxx="$CXX" --ar="$AR" --nm="$NM"
         --ranlib="$RANLIB" --strip="$STRIP"

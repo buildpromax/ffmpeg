@@ -104,6 +104,7 @@ ffmpeg_main() {
         FF_BASE_FLAGS+=(
             --target-os=linux
             --enable-static --disable-shared
+            --extra-ldflags="-L$PREFIX/lib -static"   # musl 全静态二进制
         )
     fi
 
@@ -165,7 +166,14 @@ ffmpeg_main() {
     local bin="$PREFIX/bin/ffmpeg"
     [ -x "$bin" ] || die "ffmpeg 可执行文件不存在"
     local verinfo
-    verinfo=$(LD_LIBRARY_PATH="$PREFIX/lib" "$bin" -hide_banner -version 2>/dev/null | head -3 || echo "version info unavailable")
+    verinfo=$("$bin" -hide_banner -version 2>/dev/null | head -3) || true
+    if [ -z "$verinfo" ] && [ "$TARGET_OS" != android ]; then
+        # 交叉产物在本机无法直接运行, 借助 musl loader 获取版本信息
+        local ldso
+        ldso=$(find "${TC_ROOT:-/nonexistent}" -name 'ld-musl-*.so*' -o -name 'libc.so' 2>/dev/null | head -1)
+        [ -n "$ldso" ] && verinfo=$("$ldso" "$bin" -hide_banner -version 2>/dev/null | head -3)
+    fi
+    [ -n "$verinfo" ] || verinfo="version info unavailable (cross-built binary)"
 
     cat > "$PREFIX/BUILD_INFO.txt" <<EOF
 FFmpeg 版本: $FF_VER

@@ -29,7 +29,10 @@ done
 : "${OS:?--os 必填}" "${ARCH:?--arch 必填}" "${VARIANT:?--variant 必填}"
 : "${REF:?--ref 必填}" "${VER:?--ver 必填}"
 
+# 规范化为绝对路径(相对路径会导致交叉 PATH 在 cd 后失效)
 mkdir -p "$CACHE_DIR" "$OUT_DIR"
+CACHE_DIR=$(cd "$CACHE_DIR" && pwd)
+OUT_DIR=$(cd "$OUT_DIR" && pwd)
 WORK_DIR="$PWD/_work"        # 每次运行全新的工作目录(不进 cache)
 export WORK_DIR CACHE_DIR OUT_DIR
 export DL_DIR="$WORK_DIR/_dl" SRC_DIR="$WORK_DIR/_src"

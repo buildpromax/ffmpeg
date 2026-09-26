@@ -124,7 +124,7 @@ jobs:
           PYEOF
 
   build:
-    name: 编译 ${{ matrix.os }}-${{ matrix.arch }} @ ${{ matrix.ver }}
+    name: 编译 ${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.variant }} @ ${{ matrix.ver }}
     needs: resolve
     runs-on: ubuntu-latest
     timeout-minutes: 350

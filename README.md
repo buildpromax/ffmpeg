@@ -1,52 +1,228 @@
-# FFmpeg 多平台交叉编译
+# FFmpeg 多平台自动构建
 
-基于 GitHub Actions 的 FFmpeg 自动交叉编译仓库, 类似 [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds), 但同时覆盖 **Android NDK** 与 **Linux musl** 两大平台。
+基于 GitHub Actions 的 FFmpeg 自动交叉编译, 类似 [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds), 同时覆盖 **Android NDK** 与 **Linux musl** 两大平台。
 
-## 产物矩阵
+> 本 README 由 CI 在每次发布后自动更新, 文件大小为当前 Release 实际值。
 
-| 平台 | 架构 | 格式 | 说明 |
-|------|------|------|------|
-| Android (NDK) | armeabi-v7a / arm64-v8a / x86 / x86_64 | `.zip` | 静态 `.a` + 动态 `.so` 双产物, 含 `ffmpeg` / `ffprobe` 可执行文件 |
-| Linux (musl) | x86_64 / aarch64 / armv7 / riscv64 | `.tar.xz` | **全静态**二进制, 可直接跑在 Alpine / OpenWrt / 任意 glibc 发行版 |
+按 **平台(架构)** 分组, 组内按 **版本** 折叠, 点击展开查看文件。
+
+## 下载索引
+
+<details>
+<summary><b>Android (arm64-v8a)</b></summary>
+
+<details>
+<summary>master (每日滚动快照)</summary>
+
+| 变体 | 文件 | 大小 |
+|:--|:--|--:|
+| 全功能 ultimate(完整包) | [ffmpeg-master-20260925-c966a1de-android-arm64-v8a-ultimate.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20260925-c966a1de-android-arm64-v8a-ultimate.zip) | 131.9 MiB |
+
+</details>
+
+<details>
+<summary>9.0.2</summary>
+
+| 变体 | 文件 | 大小 |
+|:--|:--|--:|
+| 全功能 ultimate(完整包) | [ffmpeg-9.0.2-android-arm64-v8a-ultimate.zip](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-android-arm64-v8a-ultimate.zip) | 131.6 MiB |
+| 精简 minimal(完整包) | [ffmpeg-9.0.2-android-arm64-v8a-minimal.zip](https://github.com/buildpromax/ffmpeg/releases/download/test-binonly/ffmpeg-9.0.2-android-arm64-v8a-minimal.zip) | 34.4 MiB |
+| 精简 minimal(仅二进制) | [ffmpeg-9.0.2-android-arm64-v8a-minimal-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/test-binonly/ffmpeg-9.0.2-android-arm64-v8a-minimal-binonly.zip) | 20.3 MiB |
+
+</details>
+
+</details>
+
+<details>
+<summary><b>Android (armeabi-v7a)</b></summary>
+
+<details>
+<summary>master (每日滚动快照)</summary>
+
+| 变体 | 文件 | 大小 |
+|:--|:--|--:|
+| 全功能 ultimate(完整包) | [ffmpeg-master-20260925-c966a1de-android-armeabi-v7a-ultimate.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20260925-c966a1de-android-armeabi-v7a-ultimate.zip) | 105.9 MiB |
+
+</details>
+
+<details>
+<summary>9.0.2</summary>
+
+| 变体 | 文件 | 大小 |
+|:--|:--|--:|
+| 全功能 ultimate(完整包) | [ffmpeg-9.0.2-android-armeabi-v7a-ultimate.zip](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-android-armeabi-v7a-ultimate.zip) | 105.7 MiB |
+
+</details>
+
+</details>
+
+<details>
+<summary><b>Android (x86_64)</b></summary>
+
+<details>
+<summary>master (每日滚动快照)</summary>
+
+| 变体 | 文件 | 大小 |
+|:--|:--|--:|
+| 全功能 ultimate(完整包) | [ffmpeg-master-20260925-c966a1de-android-x86_64-ultimate.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20260925-c966a1de-android-x86_64-ultimate.zip) | 143.4 MiB |
+
+</details>
+
+<details>
+<summary>9.0.2</summary>
+
+| 变体 | 文件 | 大小 |
+|:--|:--|--:|
+| 全功能 ultimate(完整包) | [ffmpeg-9.0.2-android-x86_64-ultimate.zip](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-android-x86_64-ultimate.zip) | 143.2 MiB |
+
+</details>
+
+</details>
+
+<details>
+<summary><b>Android (x86)</b></summary>
+
+<details>
+<summary>master (每日滚动快照)</summary>
+
+| 变体 | 文件 | 大小 |
+|:--|:--|--:|
+| 全功能 ultimate(完整包) | [ffmpeg-master-20260925-c966a1de-android-x86-ultimate.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20260925-c966a1de-android-x86-ultimate.zip) | 117.6 MiB |
+
+</details>
+
+<details>
+<summary>9.0.2</summary>
+
+| 变体 | 文件 | 大小 |
+|:--|:--|--:|
+| 全功能 ultimate(完整包) | [ffmpeg-9.0.2-android-x86-ultimate.zip](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-android-x86-ultimate.zip) | 117.3 MiB |
+
+</details>
+
+</details>
+
+<details>
+<summary><b>Linux musl (x86_64)</b></summary>
+
+<details>
+<summary>master (每日滚动快照)</summary>
+
+| 变体 | 文件 | 大小 |
+|:--|:--|--:|
+| 全功能 ultimate(完整包) | [ffmpeg-master-20260925-c966a1de-musl-x86_64-ultimate.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20260925-c966a1de-musl-x86_64-ultimate.tar.xz) | 86.8 MiB |
+
+</details>
+
+<details>
+<summary>9.0.2</summary>
+
+| 变体 | 文件 | 大小 |
+|:--|:--|--:|
+| 全功能 ultimate(完整包) | [ffmpeg-9.0.2-musl-x86_64-ultimate.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-musl-x86_64-ultimate.tar.xz) | 86.5 MiB |
+| 精简 minimal(完整包) | [ffmpeg-9.0.2-musl-x86_64-minimal.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/test-binonly/ffmpeg-9.0.2-musl-x86_64-minimal.tar.xz) | 30.2 MiB |
+| 精简 minimal(仅二进制) | [ffmpeg-9.0.2-musl-x86_64-minimal-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/test-binonly/ffmpeg-9.0.2-musl-x86_64-minimal-binonly.tar.xz) | 20.1 MiB |
+
+</details>
+
+</details>
+
+<details>
+<summary><b>Linux musl (aarch64)</b></summary>
+
+<details>
+<summary>master (每日滚动快照)</summary>
+
+| 变体 | 文件 | 大小 |
+|:--|:--|--:|
+| 全功能 ultimate(完整包) | [ffmpeg-master-20260925-c966a1de-musl-aarch64-ultimate.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20260925-c966a1de-musl-aarch64-ultimate.tar.xz) | 78.0 MiB |
+
+</details>
+
+<details>
+<summary>9.0.2</summary>
+
+| 变体 | 文件 | 大小 |
+|:--|:--|--:|
+| 全功能 ultimate(完整包) | [ffmpeg-9.0.2-musl-aarch64-ultimate.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-musl-aarch64-ultimate.tar.xz) | 77.8 MiB |
+
+</details>
+
+</details>
+
+<details>
+<summary><b>Linux musl (armv7)</b></summary>
+
+<details>
+<summary>master (每日滚动快照)</summary>
+
+| 变体 | 文件 | 大小 |
+|:--|:--|--:|
+| 全功能 ultimate(完整包) | [ffmpeg-master-20260925-c966a1de-musl-armv7-ultimate.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20260925-c966a1de-musl-armv7-ultimate.tar.xz) | 62.8 MiB |
+
+</details>
+
+<details>
+<summary>9.0.2</summary>
+
+| 变体 | 文件 | 大小 |
+|:--|:--|--:|
+| 全功能 ultimate(完整包) | [ffmpeg-9.0.2-musl-armv7-ultimate.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-musl-armv7-ultimate.tar.xz) | 62.6 MiB |
+
+</details>
+
+</details>
+
+<details>
+<summary><b>Linux musl (riscv64)</b></summary>
+
+<details>
+<summary>master (每日滚动快照)</summary>
+
+| 变体 | 文件 | 大小 |
+|:--|:--|--:|
+| 全功能 ultimate(完整包) | [ffmpeg-master-20260925-c966a1de-musl-riscv64-ultimate.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20260925-c966a1de-musl-riscv64-ultimate.tar.xz) | 76.1 MiB |
+
+</details>
+
+<details>
+<summary>9.0.2</summary>
+
+| 变体 | 文件 | 大小 |
+|:--|:--|--:|
+| 全功能 ultimate(完整包) | [ffmpeg-9.0.2-musl-riscv64-ultimate.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-musl-riscv64-ultimate.tar.xz) | 75.8 MiB |
+
+</details>
+
+</details>
+
+## 包内容说明
+
+| 包类型 | 内容 |
+|:--|:--|
+| 完整包(默认) | `bin/` 可执行文件 + 库(Android: 静态 `.a` 与动态 `.so`; musl: 全静态 `.a`) + `include/` 头文件 + `BUILD_INFO.txt` |
+| `-binonly` 仅二进制 | 仅 `ffmpeg` / `ffprobe` 可执行文件与 `BUILD_INFO.txt`, 无任何库/头文件, 适合纯命令行使用 |
+
+> 两种平台的 `bin/ffmpeg` 均为**静态链接单文件**: musl 全静态; Android 静态链接(仅依赖系统 libc), 不需要随包携带 .so。
+
+## 压缩格式说明
+
+- **Linux musl**: `.tar.xz` — 压缩率最高, tar 保留可执行权限位, Linux 生态惯例 (Alpine/Termux/OpenWrt 原生支持)
+- **Android**: `.zip` — Windows 资源管理器与手机文件管理器原生支持, 免安装第三方工具 (与 BtbN 的 win64 zip 同理)
+
+## 构建变体
+
+- `minimal` — 纯 FFmpeg, 无外部库
+- `full` — 核心外部库: openssl, x264, x265, vpx, aom, dav1d, opus, mp3lame, vorbis, webp, freetype, fribidi, harfbuzz, libass, soxr, libxml2
+- `ultimate` — 在 full 基础上尽量对齐 Termux 全功能构建: lcms2, opencore-amr, vo-amrwbenc, theora, fontconfig, libssh, libsrt, libbluray, dvdread/dvdnav, vidstab, vmaf, zimg, mysofa, openmpt, gme, svt-av1, xvid, zmq, rubberband, libjxl 等; Android 端额外启用 mediacodec / jni / vulkan (best-effort, 失败自动剔除不影响整体)
 
 ## 工作流
 
 | 文件 | 触发 | 说明 |
-|------|------|------|
-| `.github/workflows/ffmpeg-auto.yml` | 每天 02:00 (UTC+8) 自动 + 手动 | 自动编译 FFmpeg **最新 release** (发布到固定 tag `ffmpeg-<版本>`) 和 **master 快照** (发布到滚动 tag `latest`) |
-| `.github/workflows/ffmpeg-manual.yml` | 手动 | **固定版本 / 指定 NDK / 指定架构** 任意组合 |
+|:--|:--|:--|
+| `ffmpeg-auto.yml` | 每天 02:00 (UTC+8) | 自动编译最新 release (固定 tag `ffmpeg-<版本>`) + master 快照 (滚动 tag `latest`) |
+| `ffmpeg-manual.yml` | 手动 | 固定版本 / 指定 NDK / 指定架构 任意组合, 可选是否发布 Release |
 
-## 手动工作流可配置项
+## 校验
 
-- `ffmpeg_ref`: `latest` / `master` / `n8.1.2` / `8.1.2` / commit sha
-- `variant`:
-  - `minimal` — 纯 FFmpeg, 无外部库
-  - `full` — 核心外部库: openssl, x264, x265, vpx, aom, dav1d, opus, mp3lame, vorbis, webp, freetype, fribidi, harfbuzz, libass, soxr, libxml2
-  - `ultimate` — 在 full 基础上尽量对齐 Termux 全功能构建: lcms2, opencore-amr, vo-amrwbenc, theora, fontconfig, libssh, libsrt, libbluray, dvdread/dvdnav, vidstab, vmaf, zimg, mysofa, openmpt, gme, svt-av1, xvid, zmq, rubberband, libjxl 等; Android 端额外启用 mediacodec / jni / vulkan (best-effort, 失败自动跳过不影响整体)
-- `android_abis` / `musl_arches`: `all` / `none` / 逗号分隔子集 (如 `arm64-v8a,x86_64`)
-- `ndk_version` / `android_api`: NDK 版本 (默认 r29) 与 API 级别 (默认 24)
-- `create_release` / `release_tag`: 是否发 Release 及 tag 名
-
-产物命名: `ffmpeg-<版本>-<平台>-<架构>-<变体>.<格式>`
-
-## 目录结构
-
-```
-scripts/
-├── ci-build.sh          # 构建总入口 (CI 与本地通用)
-├── resolve-ref.sh       # ffmpeg 版本引用解析
-├── lib/
-│   ├── common.sh        # 下载/解包/编译辅助 + 失败注册表
-│   ├── env-android.sh   # NDK 工具链环境 (4 ABI)
-│   └── env-musl.sh      # musl 交叉工具链环境 (4 架构, 自动回退双源)
-├── build-libs.sh        # 30+ 外部库交叉编译配方
-└── build-ffmpeg.sh      # ffmpeg 配置(4级降级)/编译/打包
-```
-
-## 本地调试
-
-```bash
-# musl x86_64 全静态 minimal 构建
-bash scripts/ci-build.sh --os musl --arch x86_64 --variant minimal \
-  --ref n8.1.2 --ver 8.1.2 --mode tarball --out out
-```
+各 Release 附带 `SHA256SUMS.txt`, 校验示例: `sha256sum -c SHA256SUMS.txt`

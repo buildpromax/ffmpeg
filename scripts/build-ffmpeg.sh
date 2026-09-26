@@ -7,7 +7,8 @@
 # 特性:
 #   - 根据外部库成功列表动态组装 --enable-*
 #   - 配置失败自动降级重试(去 best-effort 开关 -> 去附加链接库 -> 纯净版)
-#   - android: 静态+动态双产物; musl: 全静态单产物
+#   - 全平台全静态: android/musl 的 ffmpeg/ffprobe 均为静态链接单文件
+#     (android 不再产出 .so; 外部库一律 .a 静态库链入)
 
 FF_BASE_FLAGS=()
 FF_LIB_FLAGS=()
@@ -131,7 +132,7 @@ ffmpeg_main() {
     if [ "$TARGET_OS" = android ]; then
         FF_BASE_FLAGS+=(
             --target-os=android
-            --enable-static --enable-shared --enable-pic
+            --enable-static --disable-shared
             --disable-indevs --disable-outdevs --enable-indev=lavfi
         )
         if [ "$FFARCH" = x86 ]; then
@@ -276,20 +277,23 @@ EOF
     local items=(include lib bin BUILD_INFO.txt)
     [ -d "$PREFIX/share" ] && items+=(share)
     local name ext binname
+    # binonly 仅含 FFmpeg 自身可执行文件(外部库自带的工具程序如 openssl/x264 不打入)
+    local bin_items=(bin/ffmpeg bin/ffprobe BUILD_INFO.txt)
+    [ -f "$PREFIX/bin/ffplay" ] && bin_items+=(bin/ffplay)
     if [ "$TARGET_OS" = android ]; then
         name="ffmpeg-${FF_VER}-android-${ABI}-${BUILD_VARIANT:-full}"
         ext=zip
         ( cd "$PREFIX" && zip -qr -9 "$OUT_DIR/$name.$ext" "${items[@]}" )
-        # 仅二进制包: 纯 ffmpeg/ffprobe 单文件(bin/ffmpeg 为静态链接), 无库与头文件
+        # 仅二进制包: 全静态单文件 ffmpeg/ffprobe, 无库/头文件/外部工具
         binname="ffmpeg-${FF_VER}-android-${ABI}-${BUILD_VARIANT:-full}-binonly"
-        ( cd "$PREFIX" && zip -qr -9 "$OUT_DIR/$binname.$ext" bin BUILD_INFO.txt )
+        ( cd "$PREFIX" && zip -qr -9 "$OUT_DIR/$binname.$ext" "${bin_items[@]}" )
     else
         name="ffmpeg-${FF_VER}-musl-${MUSL_ARCH}-${BUILD_VARIANT:-full}"
         ext=tar.xz
         ( cd "$PREFIX" && tar -cJf "$OUT_DIR/$name.$ext" "${items[@]}" )
         # 仅二进制包: 全静态单文件, 解压即用, 无静态库/头文件
         binname="ffmpeg-${FF_VER}-musl-${MUSL_ARCH}-${BUILD_VARIANT:-full}-binonly"
-        ( cd "$PREFIX" && tar -cJf "$OUT_DIR/$binname.$ext" bin BUILD_INFO.txt )
+        ( cd "$PREFIX" && tar -cJf "$OUT_DIR/$binname.$ext" "${bin_items[@]}" )
     fi
     log "打包完成: $OUT_DIR/$name.$ext (+ 仅二进制包 $binname.$ext)"
     ls -lh "$OUT_DIR"

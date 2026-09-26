@@ -12,14 +12,10 @@ on:
         default: 'latest'
         type: string
       variant:
-        description: '构建变体'
+        description: '构建变体 (逗号分隔可多选: minimal,full,ultimate)'
         required: true
-        default: 'ultimate'
-        type: choice
-        options:
-          - minimal
-          - full
-          - ultimate
+        default: 'minimal,full,ultimate'
+        type: string
       android_abis:
         description: 'Android ABI (all / none / 逗号分隔: armeabi-v7a,arm64-v8a,x86,x86_64)'
         required: true
@@ -67,7 +63,7 @@ jobs:
         id: matrix
         env:
           FFMPEG_REF: ${{ inputs.ffmpeg_ref || 'latest' }}
-          VARIANT: ${{ inputs.variant || 'ultimate' }}
+          VARIANTS: ${{ inputs.variant || 'minimal,full,ultimate' }}
           ANDROID_ABIS: ${{ inputs.android_abis || 'all' }}
           MUSL_ARCHES: ${{ inputs.musl_arches || 'all' }}
           NDK: ${{ inputs.ndk_version || 'r29' }}
@@ -101,18 +97,23 @@ jobs:
           abis = expand(os.environ["ANDROID_ABIS"], ABIS, ABI_ALIAS)
           musl = expand(os.environ["MUSL_ARCHES"], MUSL, MUSL_ALIAS)
           refs = [r.strip() for r in os.environ["FFMPEG_REF"].split(",") if r.strip()]
-          variant = os.environ["VARIANT"]
+          # 变体多选: 每个目标 × 每种变体各出一个矩阵项
+          VALID = ("minimal", "full", "ultimate")
+          variants = [v.strip() for v in os.environ["VARIANTS"].split(",") if v.strip()]
+          variants = [v for v in variants if v in VALID] or list(VALID)
           ndk, api = os.environ["NDK"], os.environ["API"]
+          print("构建变体:", variants)
 
           matrix = []
           for ref in refs:
               ver, checkout, mode = resolve(ref)
-              for abi in abis:
-                  matrix.append(dict(os="android", arch=abi, ver=ver, ref=checkout,
-                                     mode=mode, variant=variant, ndk=ndk, api=api))
-              for a in musl:
-                  matrix.append(dict(os="musl", arch=a, ver=ver, ref=checkout,
-                                     mode=mode, variant=variant, ndk=ndk, api=api))
+              for variant in variants:
+                  for abi in abis:
+                      matrix.append(dict(os="android", arch=abi, ver=ver, ref=checkout,
+                                         mode=mode, variant=variant, ndk=ndk, api=api))
+                  for a in musl:
+                      matrix.append(dict(os="musl", arch=a, ver=ver, ref=checkout,
+                                         mode=mode, variant=variant, ndk=ndk, api=api))
 
           if not matrix:
               raise SystemExit("构建矩阵为空: 请检查 android_abis / musl_arches 输入")
@@ -146,8 +147,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: cache
-          key: tc-${{ runner.os }}-${{ matrix.os }}-${{ matrix.arch }}-ndk${{ matrix.ndk }}-v1
+          key: tc-${{ runner.os }}-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.variant }}-ndk${{ matrix.ndk }}-v1
           restore-keys: |
+            tc-${{ runner.os }}-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.variant }}-
             tc-${{ runner.os }}-${{ matrix.os }}-${{ matrix.arch }}-
 
       - name: 编译 FFmpeg
@@ -168,7 +170,7 @@ jobs:
         if: ${{ always() && hashFiles('out/*') != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ffmpeg-${{ matrix.ver }}-${{ matrix.os }}-${{ matrix.arch }}
+          name: ffmpeg-${{ matrix.ver }}-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.variant }}
           path: out/*
           retention-days: 30
 

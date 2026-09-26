@@ -259,10 +259,18 @@ jobs:
         run: |
           if git diff --quiet -- README.md; then
             echo "README 无变化, 跳过提交"
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add README.md
-            git commit -m "docs: CI 自动更新 README 下载表 [skip ci]"
-            git push
+            exit 0
           fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "docs: CI 自动更新 README 下载表 [skip ci]"
+          # 推送前 rebase 远程最新, 竞争冲突自动重试(README 为全量生成, 以最新数据为准)
+          ok=0
+          for i in 1 2 3; do
+            git pull --rebase --autostash origin main \
+              && git push origin main && ok=1 && break
+            git rebase --abort 2>/dev/null || true
+            echo "推送冲突, 重试 $i/3"; sleep 8
+          done
+          [ "$ok" = 1 ] || { echo "README 推送多次失败"; exit 1; }

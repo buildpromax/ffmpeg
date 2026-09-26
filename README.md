@@ -26,8 +26,6 @@
 | 变体 | 文件 | 大小 |
 |:--|:--|--:|
 | 全功能 ultimate(完整包) | [ffmpeg-9.0.2-android-arm64-v8a-ultimate.zip](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-android-arm64-v8a-ultimate.zip) | 131.6 MiB |
-| 精简 minimal(完整包) | [ffmpeg-9.0.2-android-arm64-v8a-minimal.zip](https://github.com/buildpromax/ffmpeg/releases/download/test-binonly/ffmpeg-9.0.2-android-arm64-v8a-minimal.zip) | 34.4 MiB |
-| 精简 minimal(仅二进制) | [ffmpeg-9.0.2-android-arm64-v8a-minimal-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/test-binonly/ffmpeg-9.0.2-android-arm64-v8a-minimal-binonly.zip) | 20.3 MiB |
 
 </details>
 
@@ -120,8 +118,6 @@
 | 变体 | 文件 | 大小 |
 |:--|:--|--:|
 | 全功能 ultimate(完整包) | [ffmpeg-9.0.2-musl-x86_64-ultimate.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-musl-x86_64-ultimate.tar.xz) | 86.5 MiB |
-| 精简 minimal(完整包) | [ffmpeg-9.0.2-musl-x86_64-minimal.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/test-binonly/ffmpeg-9.0.2-musl-x86_64-minimal.tar.xz) | 30.2 MiB |
-| 精简 minimal(仅二进制) | [ffmpeg-9.0.2-musl-x86_64-minimal-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/test-binonly/ffmpeg-9.0.2-musl-x86_64-minimal-binonly.tar.xz) | 20.1 MiB |
 
 </details>
 

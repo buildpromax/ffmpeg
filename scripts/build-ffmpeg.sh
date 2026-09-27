@@ -139,6 +139,18 @@ EOF
         chmod +x "$PC_WRAPPER"
     fi
 
+    # android: libstdc++.a linker-script shim (paired with -nostdlib++ in
+    # env-android.sh FF_EXTRA_LIBS). ffmpeg 9 configure hardcodes -lstdc++
+    # into the EXTRALIBS of gme/openmpt/rubberband (not via pkg-config, so
+    # neither the .pc sanitizer nor the wrapper can intercept it). With
+    # -nostdlib++ the NDK driver skips its -lstdc++ -> libc++_shared.so
+    # rewrite and lld resolves -lstdc++ through this shim to the static
+    # runtime instead (verified: NEEDED contains system libs only).
+    # Kept out of the package: removed right before packing (see below).
+    if [ "$TARGET_OS" = android ]; then
+        printf 'INPUT(-lc++_static -lc++abi)\n' > "$PREFIX/lib/libstdc++.a"
+    fi
+
     # ---------- basic flags ----------
     FF_BASE_FLAGS=(
         --prefix="$PREFIX"

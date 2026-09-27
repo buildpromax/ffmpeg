@@ -92,6 +92,12 @@ if [ -d "$_VKH_DIR/include/vulkan" ]; then
 fi
 
 # ---------- FFmpeg 链接期附加库 ----------
+# -nostdlib++: 禁止 NDK driver 自动附加/重写 C++ 运行时 —— ffmpeg 9 的
+#   configure 对 gme/openmpt/rubberband 硬编码 -lstdc++(写入 EXTRALIBS,
+#   不经 pkg-config, .pc 消毒与 wrapper 均拦不住); 不加此开关时 r29 driver
+#   会把 -lstdc++ 重写为共享 libc++_shared.so(真机 CANNOT LINK)。加上后
+#   -lstdc++ 原样传给 lld, 由 $PREFIX/lib/libstdc++.a 链接脚本 shim 静态解析
+#   (见 build-ffmpeg.sh)。
 # -lm: gme/soxr/webp/x265/zimg 等静态库引用 libm 但 .pc 未声明, NDK 不自动补
 # -llog: vmaf 等引用 __android_log_write, 共享库链接需要 liblog
 # -lc++_static -lc++abi: 全量静态 C++ 运行时(sysroot per-triple 目录),
@@ -100,6 +106,6 @@ fi
 #   为共享 libc++_shared.so(-L shim 与 -static-libstdc++ 均拦不住, r29 实测),
 #   产物真机会因找不到该库直接 CANNOT LINK
 # -landroid: JNI/MediaCodec 平台支持
-FF_EXTRA_LIBS="-landroid -lm -llog -lc++_static -lc++abi"
+FF_EXTRA_LIBS="-nostdlib++ -landroid -lm -llog -lc++_static -lc++abi"
 
 log "NDK 环境: ABI=$ABI API=$ANDROID_API CC=$CC"

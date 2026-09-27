@@ -86,6 +86,17 @@ fi
 source "$SCRIPT_DIR/build-libs.sh"
 libs_main "$VARIANT"
 
+# ---------- FFmpeg 链接前清扫 ----------
+# 设计上全平台产物均为静态单文件(android 链接无 -static, musl 有):
+# 个别库的构建系统(如 xvid)会额外安装 .so, 而 lld 对 -l 同名时优先选 .so,
+# 会把动态依赖拖进产物(真机缺库实测)。此处统一清除, 强制链接只命中 .a
+if [ -d "$PREFIX/lib" ]; then
+    while IFS= read -r -d '' so; do
+        log "链接前清扫动态库: ${so#"$PREFIX"/}"
+        rm -f "$so"
+    done < <(find "$PREFIX/lib" -maxdepth 1 -name '*.so*' -print0 2>/dev/null)
+fi
+
 # ---------- FFmpeg 本体 ----------
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/build-ffmpeg.sh"

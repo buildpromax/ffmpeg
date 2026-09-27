@@ -68,9 +68,15 @@ _lib_flags() {
     local fl
     fl=$(_ff_key_flags "$1")
     if [ -n "$fl" ]; then FF_LIB_FLAGS+=( $fl ); fi   # 有意分词: 一库可能多开关
-    # C++ 库静态链接兜底 (android 由 env-android.sh 的 libstdc++.a shim 接管)
+    # C++ static runtime fallback:
+    #   musl  : real libstdc++.a exists + link uses -static, plain append is fine
+    #   android: NEVER append -lstdc++ -- NDK r29 clang driver rewrites it to
+    #   shared libc++_shared.so at driver level (shim/-static-libstdc++ cannot
+    #   intercept; verified locally). C++ symbols resolve via the static
+    #   -lc++_static -lc++abi preset by env-android.sh
     case "$1" in
-        x265|srt|openmpt|gme|zmq|rubberband) FF_EXTRA_LIBS="$FF_EXTRA_LIBS -lstdc++" ;;
+        x265|srt|openmpt|gme|zmq|rubberband)
+            [ "$TARGET_OS" = android ] || FF_EXTRA_LIBS="$FF_EXTRA_LIBS -lstdc++" ;;
     esac
 }
 
@@ -114,7 +120,26 @@ ffmpeg_main() {
 
     ffmpeg_src "$ref" "$mode"
 
-    # ---------- 基础参数 ----------
+    # android: pkg-config wrapper (defense in depth)
+    # .pc Libs.private may still carry -lc++/-lstdc++/-l-l:; the NDK driver
+    # rewrites those to shared libc++_shared.so -> strip them at the
+    # pkg-config output boundary; C++ symbols resolve via static runtime
+    PC_WRAPPER="$WORK_DIR/_pc-wrap/pkg-config"
+    if [ "$TARGET_OS" = android ]; then
+        mkdir -p "${PC_WRAPPER%/*}"
+        _real_pc=$(command -v pkg-config)
+        cat > "$PC_WRAPPER" <<EOF
+#!/usr/bin/env bash
+# strip flags that NDK r29 driver rewrites to libc++_shared.so
+# (must propagate pkg-config exit code: --exists depends on it)
+out=\$("$_real_pc" "\$@") || exit \$?
+[ -n "\$out" ] && printf '%s\n' "\$out" | sed -E 's/-l-l:/-l:/g; s/(^|[ \\t"])-l(stdc\\+\\+|c\\+\\+)([ \\t"]|\$)/\\1\\3/g'
+exit 0
+EOF
+        chmod +x "$PC_WRAPPER"
+    fi
+
+    # ---------- basic flags ----------
     FF_BASE_FLAGS=(
         --prefix="$PREFIX"
         --enable-gpl --enable-version3
@@ -127,6 +152,7 @@ ffmpeg_main() {
         --extra-cflags="$CFLAGS -I$PREFIX/include"
         --extra-ldflags="-L$PREFIX/lib"
     )
+    [ "$TARGET_OS" = android ] && FF_BASE_FLAGS+=(--pkg-config="$PC_WRAPPER")
     [ -n "$FFCPU" ] && FF_BASE_FLAGS+=(--cpu="$FFCPU")
 
     if [ "$TARGET_OS" = android ]; then
@@ -235,6 +261,26 @@ ffmpeg_main() {
     ( cd "$SRC_DIR/ffmpeg" && amake && make install )
     log "ffmpeg 编译安装完成"
 
+    # ---------- dynamic dependency gate (android only) ----------
+    # allowlist = Android system libs (present on every target device); any
+    # other NEEDED (e.g. libc++_shared.so / libxvidcore.so) would make the
+    # binary CANNOT LINK on device -> hard fail the build
+    if [ "$TARGET_OS" = android ]; then
+        local _allow='lib(c|m|dl|log|android|mediandk|z|vulkan|EGL|GLESv1_CM|GLESv2|OpenSLES)\.so'
+        local _exe _bad
+        for _exe in ffmpeg ffprobe; do
+            [ -x "$PREFIX/bin/$_exe" ] || continue
+            _bad=$("$READELF" -d "$PREFIX/bin/$_exe" | awk '/\(NEEDED\)/{print $NF}' \
+                   | tr -d '[]' | grep -vE "^($_allow)$" || true)
+            if [ -n "$_bad" ]; then
+                echo "----- NEEDED of $_exe -----"
+                "$READELF" -d "$PREFIX/bin/$_exe" | grep NEEDED
+                die "$_exe has non-system dynamic deps (cannot run on device): $(echo $_bad | tr '\n' ' ')"
+            fi
+        done
+        log "NEEDED gate passed: ffmpeg/ffprobe depend on system libs only"
+    fi
+
     find "$PREFIX/bin" -type f -exec "$STRIP" --strip-unneeded {} \; 2>/dev/null || true
     if [ "$TARGET_OS" = android ]; then
         find "$PREFIX/lib" -name '*.so*' -exec "$STRIP" --strip-unneeded {} \; 2>/dev/null || true
@@ -272,7 +318,7 @@ EOF
 
     # ---------- 打包 ----------
     # libstdc++.a 链接器 shim 仅构建期使用, 不进产物(避免污染下游链接环境)
-    rm -f "$PREFIX/lib/libstdc++.a"
+    rm -f "$PREFIX/lib/libstdc++.a" "$PREFIX/lib/libstdc++.so"
     mkdir -p "$OUT_DIR"
     local items=(include lib bin BUILD_INFO.txt)
     [ -d "$PREFIX/share" ] && items+=(share)

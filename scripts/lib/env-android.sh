@@ -35,6 +35,8 @@ export AR="$_TC/bin/llvm-ar"
 export RANLIB="$_TC/bin/llvm-ranlib"
 export STRIP="$_TC/bin/llvm-strip"
 export NM="$_TC/bin/llvm-nm"
+export READELF="$_TC/bin/llvm-readelf"
+export OBJDUMP="$_TC/bin/llvm-objdump"
 export CFLAGS="-O2 -fPIC"
 export CXXFLAGS="-O2 -fPIC"
 # android armv7 默认不带 NEON
@@ -92,15 +94,12 @@ fi
 # ---------- FFmpeg 链接期附加库 ----------
 # -lm: gme/soxr/webp/x265/zimg 等静态库引用 libm 但 .pc 未声明, NDK 不自动补
 # -llog: vmaf 等引用 __android_log_write, 共享库链接需要 liblog
-# -lc++_static -lc++abi: NDK r29 起完整静态 C++ 运行时(位于 per-triple 无版本目录),
-#   全量静态链接进产物, 不引入 libc++_shared.so 依赖
+# -lc++_static -lc++abi: 全量静态 C++ 运行时(sysroot per-triple 目录),
+#   产物仅依赖系统库, 不引入 libc++_shared.so
+#   ⚠ 切勿用 -lstdc++/-lc++: NDK r29 的 clang driver 会在驱动层把它们重写
+#   为共享 libc++_shared.so(-L shim 与 -static-libstdc++ 均拦不住, r29 实测),
+#   产物真机会因找不到该库直接 CANNOT LINK
 # -landroid: JNI/MediaCodec 平台支持
 FF_EXTRA_LIBS="-landroid -lm -llog -lc++_static -lc++abi"
-
-# -lstdc++ 重定向: 各外部库 .pc 普遍硬编码 -lstdc++, 而 lld 对 -l 搜索同名 .so
-# 优先于 .a, sysroot 的 libstdc++.so 是极简 stub(缺完整 libc++); 在 $PREFIX 前置
-# 一个同名 .so 链接脚本, 将 -lstdc++ 重定向到 NDK 静态 libc++(脚本会先于 sysroot 命中)
-mkdir -p "$PREFIX/lib"
-printf 'INPUT(-lc++_static -lc++abi)\n' > "$PREFIX/lib/libstdc++.so"
 
 log "NDK 环境: ABI=$ABI API=$ANDROID_API CC=$CC"

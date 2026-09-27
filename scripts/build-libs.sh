@@ -17,7 +17,10 @@ libs_main() {
     local lib
     for lib in $REQUIRED_FULL; do run_lib "$lib" required; done
 
-    [ "$variant" = ultimate ] || return 0
+    if [ "$variant" != ultimate ]; then
+        sanitize_pc_files
+        return 0
+    fi
 
     # ---- ultimate 档: 可选库(对齐 Termux 全功能配置, 失败自动跳过) ----
     local OPTIONAL="lcms2 opencore-amr vo-amrwbenc theora expat fontconfig ssh srt bluray dvdread dvdnav vidstab vmaf zimg mysofa mpg123 openmpt gme svtav1 xvid zmq speexdsp rubberband jxl"
@@ -27,15 +30,24 @@ libs_main() {
         warn "以下可选库编译失败(不影响产物): $(paste -sd, "$LIBS_FAILED_FILE")"
     fi
 
-    # 消毒 CMake 生成的 .pc: clang 隐式库 "-l:libunwind.a" 会被部分工程的
-    # pc 生成逻辑二次加 -l 前缀变成非法的 "-l-l:libunwind.a"(x265 实测),
-    # 还原为 lld 可识别的 "-l:libunwind.a"
+    sanitize_pc_files
+}
+
+# 消毒 CMake 生成的 .pc(全变体执行):
+#   1. clang 隐式库 "-l:libunwind.a" 会被部分工程的 pc 生成逻辑二次加 -l 前缀
+#      变成非法的 "-l-l:libunwind.a"(x265 实测), 还原为 lld 可识别的写法
+#   2. 剔除 "-lc++" / "-lstdc++": NDK r29 的 clang driver 会把它们重写为
+#      共享运行时 libc++_shared.so(产物真机无法链接), C++ 运行时统一由
+#      env-android.sh 的 -lc++_static -lc++abi 静态提供
+sanitize_pc_files() {
     local pc
     for pc in "$PREFIX/lib/pkgconfig"/*.pc; do
         [ -e "$pc" ] || break
-        if grep -q -- '-l-l:' "$pc" 2>/dev/null; then
-            sed -i -E 's/-l(-l:[^ ]+)/\1/g' "$pc"
-            warn "已修复 .pc 中的 -l-l: 畸形库引用: $(basename "$pc")"
+        if grep -qE -- '-l-l:|-lc\+\+|-lstdc\+\+' "$pc" 2>/dev/null; then
+            sed -i -E 's/-l-l:/-l:/g; s/(^|[ \t"])-l(stdc\+\+|c\+\+)([ \t"]|$)/\1\3/g' "$pc"
+            # 相邻重复的 -lc++ -lc++ 可能残留一个, 再过一遍
+            sed -i -E 's/(^|[ \t"])-l(stdc\+\+|c\+\+)([ \t"]|$)/\1\3/g' "$pc"
+            warn "已消毒 .pc: $(basename "$pc") (-l-l: / -lc++ / -lstdc++)"
         fi
     done
 }
@@ -200,6 +212,9 @@ build_xvid() {
       CC="$CC" RANLIB="$RANLIB" AR="$AR" \
       ./configure --host="$AHOST" --prefix="$PREFIX" --disable-assembly && \
       amake && make install )
+    # xvid 构建系统总是同时产出动态库; android 链接无 -static 会命中 .so,
+    # 把动态依赖拖进产物(真机缺 libxvidcore.so.4 实测) -> 只保留静态库
+    rm -f "$PREFIX/lib/libxvidcore.so"*
 }
 
 # ============================================================ 音频编码器

@@ -148,6 +148,8 @@ EOF
     # runtime instead (verified: NEEDED contains system libs only).
     # Kept out of the package: removed right before packing (see below).
     if [ "$TARGET_OS" = android ]; then
+        # minimal 不编外部库, $PREFIX/lib 可能尚不存在
+        mkdir -p "$PREFIX/lib"
         printf 'INPUT(-lc++_static -lc++abi)\n' > "$PREFIX/lib/libstdc++.a"
     fi
 

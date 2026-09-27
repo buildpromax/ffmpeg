@@ -35,7 +35,7 @@ CACHE_DIR=$(cd "$CACHE_DIR" && pwd)
 OUT_DIR=$(cd "$OUT_DIR" && pwd)
 WORK_DIR="$PWD/_work"        # 每次运行全新的工作目录(不进 cache)
 export WORK_DIR CACHE_DIR OUT_DIR
-export DL_DIR="$WORK_DIR/_dl" SRC_DIR="$WORK_DIR/_src"
+export DL_DIR="$CACHE_DIR/_dl" SRC_DIR="$WORK_DIR/_src"   # tarball 进缓存, 跨 job/跨 run 复用降低下载源压力
 export PREFIX="$WORK_DIR/prefix"
 export NDK_VERSION BUILD_VARIANT=$VARIANT
 mkdir -p "$PREFIX" "$DL_DIR" "$SRC_DIR"

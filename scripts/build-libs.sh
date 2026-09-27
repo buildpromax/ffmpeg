@@ -43,7 +43,8 @@ libs_main() {
 # ============================================================ 基础库
 
 build_zlib() {
-    get_tar_src zlib https://zlib.net/fossils/zlib-1.3.1.tar.gz
+    get_tar_src zlib https://zlib.net/fossils/zlib-1.3.1.tar.gz \
+                  https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz
     ( cd "$SRC_DIR/zlib" && \
       CHOST="$AHOST" CC="$CC" AR="$AR" RANLIB="$RANLIB" STRIP="$STRIP" \
       ./configure --static --prefix="$PREFIX" && \

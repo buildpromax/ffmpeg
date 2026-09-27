@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-DL_DIR="${DL_DIR:-$WORK_DIR/_dl}"
+DL_DIR="${DL_DIR:-$CACHE_DIR/_dl}"
 SRC_DIR="${SRC_DIR:-$WORK_DIR/_src}"
 LIBS_OK_FILE="$WORK_DIR/_libs_ok.txt"
 LIBS_FAILED_FILE="$WORK_DIR/_libs_failed.txt"
@@ -21,12 +21,13 @@ die()  { printf '\033[1;31m[ERROR]\033[0m %s\n' "$*" >&2; exit 1; }
 
 # ---------- downloads ----------
 
-fetch() { # fetch <url> <outfile>
+fetch() { # fetch <url> <outfile> —— 失败返回非零, 不终止脚本(由调用方决定降级/换源)
     local url=$1 out=$2
     [ -s "$out" ] && { log "命中缓存: $(basename "$out")"; return 0; }
     log "下载 $url"
-    curl -fL --retry 4 --retry-delay 8 --connect-timeout 30 -o "$out" "$url" \
-        || die "下载失败: $url"
+    curl -fL --retry 4 --retry-delay 8 --connect-timeout 30 -o "$out.part" "$url" \
+        && mv -f "$out.part" "$out" \
+        || { rm -f "$out.part"; warn "下载失败: $url"; return 1; }
 }
 
 # unpack with auto root-dir detection (strip single top dir if present)

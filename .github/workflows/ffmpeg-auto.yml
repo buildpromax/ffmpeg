@@ -178,6 +178,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - uses: actions/checkout@v4
+
       - name: 下载全部产物
         uses: actions/download-artifact@v4
         with:
@@ -224,6 +226,10 @@ jobs:
             else
               gh release create "ffmpeg-$name" "$d"/* --title "FFmpeg $name" --notes "$notes"
             fi
+            # BtbN 风格正文: 按平台分组的下载表(文件链接 + 实际大小)写入 release note
+            python3 "$GITHUB_WORKSPACE/scripts/generate-release-note.py" \
+              --tag "ffmpeg-$name" --header "FFmpeg $name 自动构建" \
+              --time "$(date -u '+%Y-%m-%d %H:%M UTC')" --apply
             echo "已发布: ffmpeg-$name"
           done
 
@@ -233,11 +239,11 @@ jobs:
             gh release delete latest --cleanup-tag -y 2>/dev/null || true
             gh release create latest grp/master/* \
               --title "FFmpeg master 最新快照" \
-              --notes "master 分支每日自动构建 (覆盖式更新)
-
-          - Android NDK 四架构 zip: armeabi-v7a / arm64-v8a / x86 / x86_64
-          - Linux musl 四架构 tar.xz: x86_64 / aarch64 / armv7 / riscv64 (全静态二进制)
-          - 构建时间: $(date -u '+%Y-%m-%d %H:%M UTC')"
+              --notes "master 分支每日自动构建 (覆盖式更新)"
+            # BtbN 风格正文: 按平台分组的下载表(文件链接 + 实际大小)写入 release note
+            python3 "$GITHUB_WORKSPACE/scripts/generate-release-note.py" \
+              --tag latest --header "master 分支每日自动构建 (覆盖式更新)" \
+              --time "$(date -u '+%Y-%m-%d %H:%M UTC')" --apply
             echo "已发布: latest (master 快照)"
           fi
 

@@ -181,6 +181,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - uses: actions/checkout@v4
+
       - name: 下载全部产物
         uses: actions/download-artifact@v4
         with:
@@ -211,6 +213,11 @@ jobs:
           fi
           gh release create "$TAG" ./* --title "FFmpeg ${{ inputs.ffmpeg_ref || 'latest' }}" --notes "$notes" \
             || gh release upload "$TAG" --clobber ./*
+          # BtbN 风格正文: 按平台分组的下载表(文件链接 + 实际大小)写入 release note
+          python3 "$GITHUB_WORKSPACE/scripts/generate-release-note.py" \
+            --tag "$TAG" \
+            --header "FFmpeg ${{ inputs.ffmpeg_ref || 'latest' }} 自动交叉编译 (${{ inputs.variant || 'ultimate' }} 变体)" \
+            --time "$(date -u '+%Y-%m-%d %H:%M UTC')" --apply
           echo "发布完成: $TAG"
 
   readme:

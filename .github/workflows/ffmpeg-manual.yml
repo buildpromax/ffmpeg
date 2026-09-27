@@ -57,7 +57,7 @@ jobs:
     outputs:
       matrix_json: ${{ steps.matrix.outputs.matrix_json }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: 生成构建矩阵
         id: matrix
@@ -132,7 +132,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.resolve.outputs.matrix_json) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: 安装构建依赖
         run: |
@@ -144,7 +144,7 @@ jobs:
             texinfo perl python3 zip unzip xz-utils curl git
 
       - name: 缓存工具链
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: cache
           key: tc-${{ runner.os }}-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.variant }}-ndk${{ matrix.ndk }}-v1
@@ -168,7 +168,7 @@ jobs:
 
       - name: 上传构建产物
         if: ${{ always() && hashFiles('out/*') != '' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ffmpeg-${{ matrix.ver }}-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.variant }}
           path: out/*
@@ -181,10 +181,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: 下载全部产物
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: ffmpeg-*
           merge-multiple: true
@@ -227,7 +227,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: 生成 README
         env:

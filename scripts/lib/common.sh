@@ -30,6 +30,17 @@ fetch() { # fetch <url> <outfile> —— 失败返回非零, 不终止脚本(由
         || { rm -f "$out.part"; warn "下载失败: $url"; return 1; }
 }
 
+# 校验下载内容是否为受支持的压缩包(防"HTTP 200 + HTML 错误页"入库:
+# 此类文件能通过 fetch 的 -s 非空检查进入缓存, 且缓存命中后会反复撞死)
+verify_archive() { # verify_archive <tarball>
+    local magic
+    magic=$(head -c6 "$1" | od -An -tx1 | tr -d ' \n')
+    case "$magic" in
+        fd377a585a00 | 1f8b* | 425a68*) return 0 ;;  # xz / gzip / bzip2
+        *) return 1 ;;
+    esac
+}
+
 # unpack with auto root-dir detection (strip single top dir if present)
 # 压缩格式按文件魔数识别(不依赖 URL/文件名扩展名)
 unpack() { # unpack <tarball> <destdir>
@@ -59,6 +70,13 @@ get_tar_src() { # get_tar_src <name> <url> [fallback-url...]
     for url in "$@"; do
         for attempt in 1 2 3; do
             if fetch "$url" "$DL_DIR/$name.tb" 2>/dev/null; then
+                # 前置魔数校验: 源站偶发 200+HTML 错误页, 若入库则丢弃重下
+                if ! verify_archive "$DL_DIR/$name.tb"; then
+                    warn "下载内容非法(HTML 错误页?), 丢弃: $url"
+                    rm -f "$DL_DIR/$name.tb"
+                    sleep $((attempt * 5))
+                    continue
+                fi
                 unpack "$DL_DIR/$name.tb" "$SRC_DIR/$name" && { log "源码就绪: $name"; return 0; }
             fi
             warn "下载失败(第${attempt}次): $url"

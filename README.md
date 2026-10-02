@@ -16,12 +16,12 @@
 
 | 变体 | 文件 | 大小 |
 |:--|:--|--:|
-| 全功能 ultimate(完整包) | [ffmpeg-master-20261001-0eb6a369-android-arm64-v8a-ultimate.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-arm64-v8a-ultimate.zip) | 157.1 MiB |
-| 全功能 ultimate(仅二进制) | [ffmpeg-master-20261001-0eb6a369-android-arm64-v8a-ultimate-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-arm64-v8a-ultimate-binonly.zip) | 52.5 MiB |
-| 标准 full(完整包) | [ffmpeg-master-20261001-0eb6a369-android-arm64-v8a-full.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-arm64-v8a-full.zip) | 98.9 MiB |
-| 标准 full(仅二进制) | [ffmpeg-master-20261001-0eb6a369-android-arm64-v8a-full-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-arm64-v8a-full-binonly.zip) | 40.7 MiB |
-| 精简 minimal(完整包) | [ffmpeg-master-20261001-0eb6a369-android-arm64-v8a-minimal.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-arm64-v8a-minimal.zip) | 34.7 MiB |
-| 精简 minimal(仅二进制) | [ffmpeg-master-20261001-0eb6a369-android-arm64-v8a-minimal-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-arm64-v8a-minimal-binonly.zip) | 20.5 MiB |
+| 全功能 ultimate(完整包) | [ffmpeg-master-20261002-98e92563-android-arm64-v8a-ultimate.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-arm64-v8a-ultimate.zip) | 157.1 MiB |
+| 全功能 ultimate(仅二进制) | [ffmpeg-master-20261002-98e92563-android-arm64-v8a-ultimate-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-arm64-v8a-ultimate-binonly.zip) | 52.4 MiB |
+| 标准 full(完整包) | [ffmpeg-master-20261002-98e92563-android-arm64-v8a-full.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-arm64-v8a-full.zip) | 98.9 MiB |
+| 标准 full(仅二进制) | [ffmpeg-master-20261002-98e92563-android-arm64-v8a-full-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-arm64-v8a-full-binonly.zip) | 40.7 MiB |
+| 精简 minimal(完整包) | [ffmpeg-master-20261002-98e92563-android-arm64-v8a-minimal.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-arm64-v8a-minimal.zip) | 34.7 MiB |
+| 精简 minimal(仅二进制) | [ffmpeg-master-20261002-98e92563-android-arm64-v8a-minimal-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-arm64-v8a-minimal-binonly.zip) | 20.5 MiB |
 
 </details>
 
@@ -63,12 +63,12 @@
 
 | 变体 | 文件 | 大小 |
 |:--|:--|--:|
-| 全功能 ultimate(完整包) | [ffmpeg-master-20261001-0eb6a369-android-armeabi-v7a-ultimate.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-armeabi-v7a-ultimate.zip) | 127.9 MiB |
-| 全功能 ultimate(仅二进制) | [ffmpeg-master-20261001-0eb6a369-android-armeabi-v7a-ultimate-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-armeabi-v7a-ultimate-binonly.zip) | 45.8 MiB |
-| 标准 full(完整包) | [ffmpeg-master-20261001-0eb6a369-android-armeabi-v7a-full.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-armeabi-v7a-full.zip) | 90.4 MiB |
-| 标准 full(仅二进制) | [ffmpeg-master-20261001-0eb6a369-android-armeabi-v7a-full-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-armeabi-v7a-full-binonly.zip) | 38.1 MiB |
-| 精简 minimal(完整包) | [ffmpeg-master-20261001-0eb6a369-android-armeabi-v7a-minimal.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-armeabi-v7a-minimal.zip) | 33.0 MiB |
-| 精简 minimal(仅二进制) | [ffmpeg-master-20261001-0eb6a369-android-armeabi-v7a-minimal-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-armeabi-v7a-minimal-binonly.zip) | 19.5 MiB |
+| 全功能 ultimate(完整包) | [ffmpeg-master-20261002-98e92563-android-armeabi-v7a-ultimate.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-armeabi-v7a-ultimate.zip) | 127.9 MiB |
+| 全功能 ultimate(仅二进制) | [ffmpeg-master-20261002-98e92563-android-armeabi-v7a-ultimate-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-armeabi-v7a-ultimate-binonly.zip) | 45.8 MiB |
+| 标准 full(完整包) | [ffmpeg-master-20261002-98e92563-android-armeabi-v7a-full.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-armeabi-v7a-full.zip) | 90.4 MiB |
+| 标准 full(仅二进制) | [ffmpeg-master-20261002-98e92563-android-armeabi-v7a-full-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-armeabi-v7a-full-binonly.zip) | 38.1 MiB |
+| 精简 minimal(完整包) | [ffmpeg-master-20261002-98e92563-android-armeabi-v7a-minimal.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-armeabi-v7a-minimal.zip) | 33.0 MiB |
+| 精简 minimal(仅二进制) | [ffmpeg-master-20261002-98e92563-android-armeabi-v7a-minimal-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-armeabi-v7a-minimal-binonly.zip) | 19.5 MiB |
 
 </details>
 
@@ -110,12 +110,12 @@
 
 | 变体 | 文件 | 大小 |
 |:--|:--|--:|
-| 全功能 ultimate(完整包) | [ffmpeg-master-20261001-0eb6a369-android-x86_64-ultimate.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-x86_64-ultimate.zip) | 172.1 MiB |
-| 全功能 ultimate(仅二进制) | [ffmpeg-master-20261001-0eb6a369-android-x86_64-ultimate-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-x86_64-ultimate-binonly.zip) | 59.4 MiB |
-| 标准 full(完整包) | [ffmpeg-master-20261001-0eb6a369-android-x86_64-full.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-x86_64-full.zip) | 100.1 MiB |
-| 标准 full(仅二进制) | [ffmpeg-master-20261001-0eb6a369-android-x86_64-full-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-x86_64-full-binonly.zip) | 44.0 MiB |
-| 精简 minimal(完整包) | [ffmpeg-master-20261001-0eb6a369-android-x86_64-minimal.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-x86_64-minimal.zip) | 37.6 MiB |
-| 精简 minimal(仅二进制) | [ffmpeg-master-20261001-0eb6a369-android-x86_64-minimal-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-x86_64-minimal-binonly.zip) | 22.2 MiB |
+| 全功能 ultimate(完整包) | [ffmpeg-master-20261002-98e92563-android-x86_64-ultimate.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-x86_64-ultimate.zip) | 172.1 MiB |
+| 全功能 ultimate(仅二进制) | [ffmpeg-master-20261002-98e92563-android-x86_64-ultimate-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-x86_64-ultimate-binonly.zip) | 59.4 MiB |
+| 标准 full(完整包) | [ffmpeg-master-20261002-98e92563-android-x86_64-full.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-x86_64-full.zip) | 100.1 MiB |
+| 标准 full(仅二进制) | [ffmpeg-master-20261002-98e92563-android-x86_64-full-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-x86_64-full-binonly.zip) | 44.0 MiB |
+| 精简 minimal(完整包) | [ffmpeg-master-20261002-98e92563-android-x86_64-minimal.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-x86_64-minimal.zip) | 37.6 MiB |
+| 精简 minimal(仅二进制) | [ffmpeg-master-20261002-98e92563-android-x86_64-minimal-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-x86_64-minimal-binonly.zip) | 22.3 MiB |
 
 </details>
 
@@ -157,12 +157,12 @@
 
 | 变体 | 文件 | 大小 |
 |:--|:--|--:|
-| 全功能 ultimate(完整包) | [ffmpeg-master-20261001-0eb6a369-android-x86-ultimate.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-x86-ultimate.zip) | 143.4 MiB |
-| 全功能 ultimate(仅二进制) | [ffmpeg-master-20261001-0eb6a369-android-x86-ultimate-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-x86-ultimate-binonly.zip) | 54.0 MiB |
-| 标准 full(完整包) | [ffmpeg-master-20261001-0eb6a369-android-x86-full.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-x86-full.zip) | 89.8 MiB |
-| 标准 full(仅二进制) | [ffmpeg-master-20261001-0eb6a369-android-x86-full-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-x86-full-binonly.zip) | 41.7 MiB |
-| 精简 minimal(完整包) | [ffmpeg-master-20261001-0eb6a369-android-x86-minimal.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-x86-minimal.zip) | 38.5 MiB |
-| 精简 minimal(仅二进制) | [ffmpeg-master-20261001-0eb6a369-android-x86-minimal-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-android-x86-minimal-binonly.zip) | 23.0 MiB |
+| 全功能 ultimate(完整包) | [ffmpeg-master-20261002-98e92563-android-x86-ultimate.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-x86-ultimate.zip) | 143.4 MiB |
+| 全功能 ultimate(仅二进制) | [ffmpeg-master-20261002-98e92563-android-x86-ultimate-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-x86-ultimate-binonly.zip) | 54.0 MiB |
+| 标准 full(完整包) | [ffmpeg-master-20261002-98e92563-android-x86-full.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-x86-full.zip) | 89.9 MiB |
+| 标准 full(仅二进制) | [ffmpeg-master-20261002-98e92563-android-x86-full-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-x86-full-binonly.zip) | 41.8 MiB |
+| 精简 minimal(完整包) | [ffmpeg-master-20261002-98e92563-android-x86-minimal.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-x86-minimal.zip) | 38.5 MiB |
+| 精简 minimal(仅二进制) | [ffmpeg-master-20261002-98e92563-android-x86-minimal-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-android-x86-minimal-binonly.zip) | 23.1 MiB |
 
 </details>
 
@@ -171,7 +171,7 @@
 
 | 变体 | 文件 | 大小 |
 |:--|:--|--:|
-| 全功能 ultimate(完整包) | [ffmpeg-9.0.2-android-x86-ultimate.zip](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-android-x86-ultimate.zip) | 142.9 MiB |
+| 全功能 ultimate(完整包) | [ffmpeg-9.0.2-android-x86-ultimate.zip](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-android-x86-ultimate.zip) | 143.0 MiB |
 | 全功能 ultimate(仅二进制) | [ffmpeg-9.0.2-android-x86-ultimate-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-android-x86-ultimate-binonly.zip) | 53.7 MiB |
 | 标准 full(完整包) | [ffmpeg-9.0.2-android-x86-full.zip](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-android-x86-full.zip) | 89.4 MiB |
 | 标准 full(仅二进制) | [ffmpeg-9.0.2-android-x86-full-binonly.zip](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-android-x86-full-binonly.zip) | 41.5 MiB |
@@ -204,12 +204,12 @@
 
 | 变体 | 文件 | 大小 |
 |:--|:--|--:|
-| 全功能 ultimate(完整包) | [ffmpeg-master-20261001-0eb6a369-musl-x86_64-ultimate.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-x86_64-ultimate.tar.xz) | 86.8 MiB |
-| 全功能 ultimate(仅二进制) | [ffmpeg-master-20261001-0eb6a369-musl-x86_64-ultimate-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-x86_64-ultimate-binonly.tar.xz) | 48.3 MiB |
-| 标准 full(完整包) | [ffmpeg-master-20261001-0eb6a369-musl-x86_64-full.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-x86_64-full.tar.xz) | 68.1 MiB |
-| 标准 full(仅二进制) | [ffmpeg-master-20261001-0eb6a369-musl-x86_64-full-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-x86_64-full-binonly.tar.xz) | 38.8 MiB |
-| 精简 minimal(完整包) | [ffmpeg-master-20261001-0eb6a369-musl-x86_64-minimal.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-x86_64-minimal.tar.xz) | 30.6 MiB |
-| 精简 minimal(仅二进制) | [ffmpeg-master-20261001-0eb6a369-musl-x86_64-minimal-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-x86_64-minimal-binonly.tar.xz) | 20.3 MiB |
+| 全功能 ultimate(完整包) | [ffmpeg-master-20261002-98e92563-musl-x86_64-ultimate.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-x86_64-ultimate.tar.xz) | 86.9 MiB |
+| 全功能 ultimate(仅二进制) | [ffmpeg-master-20261002-98e92563-musl-x86_64-ultimate-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-x86_64-ultimate-binonly.tar.xz) | 48.3 MiB |
+| 标准 full(完整包) | [ffmpeg-master-20261002-98e92563-musl-x86_64-full.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-x86_64-full.tar.xz) | 68.1 MiB |
+| 标准 full(仅二进制) | [ffmpeg-master-20261002-98e92563-musl-x86_64-full-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-x86_64-full-binonly.tar.xz) | 38.9 MiB |
+| 精简 minimal(完整包) | [ffmpeg-master-20261002-98e92563-musl-x86_64-minimal.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-x86_64-minimal.tar.xz) | 30.6 MiB |
+| 精简 minimal(仅二进制) | [ffmpeg-master-20261002-98e92563-musl-x86_64-minimal-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-x86_64-minimal-binonly.tar.xz) | 20.3 MiB |
 
 </details>
 
@@ -221,7 +221,7 @@
 | 全功能 ultimate(完整包) | [ffmpeg-9.0.2-musl-x86_64-ultimate.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-musl-x86_64-ultimate.tar.xz) | 86.5 MiB |
 | 全功能 ultimate(仅二进制) | [ffmpeg-9.0.2-musl-x86_64-ultimate-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-musl-x86_64-ultimate-binonly.tar.xz) | 48.1 MiB |
 | 标准 full(完整包) | [ffmpeg-9.0.2-musl-x86_64-full.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-musl-x86_64-full.tar.xz) | 67.8 MiB |
-| 标准 full(仅二进制) | [ffmpeg-9.0.2-musl-x86_64-full-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-musl-x86_64-full-binonly.tar.xz) | 38.7 MiB |
+| 标准 full(仅二进制) | [ffmpeg-9.0.2-musl-x86_64-full-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-musl-x86_64-full-binonly.tar.xz) | 38.6 MiB |
 | 精简 minimal(完整包) | [ffmpeg-9.0.2-musl-x86_64-minimal.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-musl-x86_64-minimal.tar.xz) | 30.2 MiB |
 | 精简 minimal(仅二进制) | [ffmpeg-9.0.2-musl-x86_64-minimal-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-musl-x86_64-minimal-binonly.tar.xz) | 20.1 MiB |
 
@@ -251,12 +251,12 @@
 
 | 变体 | 文件 | 大小 |
 |:--|:--|--:|
-| 全功能 ultimate(完整包) | [ffmpeg-master-20261001-0eb6a369-musl-aarch64-ultimate.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-aarch64-ultimate.tar.xz) | 78.1 MiB |
-| 全功能 ultimate(仅二进制) | [ffmpeg-master-20261001-0eb6a369-musl-aarch64-ultimate-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-aarch64-ultimate-binonly.tar.xz) | 42.9 MiB |
-| 标准 full(完整包) | [ffmpeg-master-20261001-0eb6a369-musl-aarch64-full.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-aarch64-full.tar.xz) | 59.7 MiB |
-| 标准 full(仅二进制) | [ffmpeg-master-20261001-0eb6a369-musl-aarch64-full-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-aarch64-full-binonly.tar.xz) | 33.6 MiB |
-| 精简 minimal(完整包) | [ffmpeg-master-20261001-0eb6a369-musl-aarch64-minimal.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-aarch64-minimal.tar.xz) | 26.9 MiB |
-| 精简 minimal(仅二进制) | [ffmpeg-master-20261001-0eb6a369-musl-aarch64-minimal-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-aarch64-minimal-binonly.tar.xz) | 17.8 MiB |
+| 全功能 ultimate(完整包) | [ffmpeg-master-20261002-98e92563-musl-aarch64-ultimate.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-aarch64-ultimate.tar.xz) | 78.1 MiB |
+| 全功能 ultimate(仅二进制) | [ffmpeg-master-20261002-98e92563-musl-aarch64-ultimate-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-aarch64-ultimate-binonly.tar.xz) | 42.9 MiB |
+| 标准 full(完整包) | [ffmpeg-master-20261002-98e92563-musl-aarch64-full.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-aarch64-full.tar.xz) | 59.7 MiB |
+| 标准 full(仅二进制) | [ffmpeg-master-20261002-98e92563-musl-aarch64-full-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-aarch64-full-binonly.tar.xz) | 33.6 MiB |
+| 精简 minimal(完整包) | [ffmpeg-master-20261002-98e92563-musl-aarch64-minimal.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-aarch64-minimal.tar.xz) | 26.9 MiB |
+| 精简 minimal(仅二进制) | [ffmpeg-master-20261002-98e92563-musl-aarch64-minimal-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-aarch64-minimal-binonly.tar.xz) | 17.8 MiB |
 
 </details>
 
@@ -270,7 +270,7 @@
 | 标准 full(完整包) | [ffmpeg-9.0.2-musl-aarch64-full.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-musl-aarch64-full.tar.xz) | 59.4 MiB |
 | 标准 full(仅二进制) | [ffmpeg-9.0.2-musl-aarch64-full-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-musl-aarch64-full-binonly.tar.xz) | 33.4 MiB |
 | 精简 minimal(完整包) | [ffmpeg-9.0.2-musl-aarch64-minimal.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-musl-aarch64-minimal.tar.xz) | 26.6 MiB |
-| 精简 minimal(仅二进制) | [ffmpeg-9.0.2-musl-aarch64-minimal-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-musl-aarch64-minimal-binonly.tar.xz) | 17.6 MiB |
+| 精简 minimal(仅二进制) | [ffmpeg-9.0.2-musl-aarch64-minimal-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/ffmpeg-9.0.2/ffmpeg-9.0.2-musl-aarch64-minimal-binonly.tar.xz) | 17.7 MiB |
 
 </details>
 
@@ -298,12 +298,12 @@
 
 | 变体 | 文件 | 大小 |
 |:--|:--|--:|
-| 全功能 ultimate(完整包) | [ffmpeg-master-20261001-0eb6a369-musl-armv7-ultimate.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-armv7-ultimate.tar.xz) | 62.9 MiB |
-| 全功能 ultimate(仅二进制) | [ffmpeg-master-20261001-0eb6a369-musl-armv7-ultimate-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-armv7-ultimate-binonly.tar.xz) | 35.2 MiB |
-| 标准 full(完整包) | [ffmpeg-master-20261001-0eb6a369-musl-armv7-full.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-armv7-full.tar.xz) | 53.4 MiB |
-| 标准 full(仅二进制) | [ffmpeg-master-20261001-0eb6a369-musl-armv7-full-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-armv7-full-binonly.tar.xz) | 31.2 MiB |
-| 精简 minimal(完整包) | [ffmpeg-master-20261001-0eb6a369-musl-armv7-minimal.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-armv7-minimal.tar.xz) | 24.9 MiB |
-| 精简 minimal(仅二进制) | [ffmpeg-master-20261001-0eb6a369-musl-armv7-minimal-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-armv7-minimal-binonly.tar.xz) | 16.7 MiB |
+| 全功能 ultimate(完整包) | [ffmpeg-master-20261002-98e92563-musl-armv7-ultimate.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-armv7-ultimate.tar.xz) | 62.9 MiB |
+| 全功能 ultimate(仅二进制) | [ffmpeg-master-20261002-98e92563-musl-armv7-ultimate-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-armv7-ultimate-binonly.tar.xz) | 35.2 MiB |
+| 标准 full(完整包) | [ffmpeg-master-20261002-98e92563-musl-armv7-full.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-armv7-full.tar.xz) | 53.4 MiB |
+| 标准 full(仅二进制) | [ffmpeg-master-20261002-98e92563-musl-armv7-full-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-armv7-full-binonly.tar.xz) | 31.2 MiB |
+| 精简 minimal(完整包) | [ffmpeg-master-20261002-98e92563-musl-armv7-minimal.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-armv7-minimal.tar.xz) | 24.9 MiB |
+| 精简 minimal(仅二进制) | [ffmpeg-master-20261002-98e92563-musl-armv7-minimal-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-armv7-minimal-binonly.tar.xz) | 16.7 MiB |
 
 </details>
 
@@ -345,12 +345,12 @@
 
 | 变体 | 文件 | 大小 |
 |:--|:--|--:|
-| 全功能 ultimate(完整包) | [ffmpeg-master-20261001-0eb6a369-musl-riscv64-ultimate.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-riscv64-ultimate.tar.xz) | 76.2 MiB |
-| 全功能 ultimate(仅二进制) | [ffmpeg-master-20261001-0eb6a369-musl-riscv64-ultimate-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-riscv64-ultimate-binonly.tar.xz) | 35.3 MiB |
-| 标准 full(完整包) | [ffmpeg-master-20261001-0eb6a369-musl-riscv64-full.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-riscv64-full.tar.xz) | 62.5 MiB |
-| 标准 full(仅二进制) | [ffmpeg-master-20261001-0eb6a369-musl-riscv64-full-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-riscv64-full-binonly.tar.xz) | 30.4 MiB |
-| 精简 minimal(完整包) | [ffmpeg-master-20261001-0eb6a369-musl-riscv64-minimal.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-riscv64-minimal.tar.xz) | 31.7 MiB |
-| 精简 minimal(仅二进制) | [ffmpeg-master-20261001-0eb6a369-musl-riscv64-minimal-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261001-0eb6a369-musl-riscv64-minimal-binonly.tar.xz) | 18.0 MiB |
+| 全功能 ultimate(完整包) | [ffmpeg-master-20261002-98e92563-musl-riscv64-ultimate.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-riscv64-ultimate.tar.xz) | 76.2 MiB |
+| 全功能 ultimate(仅二进制) | [ffmpeg-master-20261002-98e92563-musl-riscv64-ultimate-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-riscv64-ultimate-binonly.tar.xz) | 35.3 MiB |
+| 标准 full(完整包) | [ffmpeg-master-20261002-98e92563-musl-riscv64-full.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-riscv64-full.tar.xz) | 62.5 MiB |
+| 标准 full(仅二进制) | [ffmpeg-master-20261002-98e92563-musl-riscv64-full-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-riscv64-full-binonly.tar.xz) | 30.4 MiB |
+| 精简 minimal(完整包) | [ffmpeg-master-20261002-98e92563-musl-riscv64-minimal.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-riscv64-minimal.tar.xz) | 31.7 MiB |
+| 精简 minimal(仅二进制) | [ffmpeg-master-20261002-98e92563-musl-riscv64-minimal-binonly.tar.xz](https://github.com/buildpromax/ffmpeg/releases/download/latest/ffmpeg-master-20261002-98e92563-musl-riscv64-minimal-binonly.tar.xz) | 18.0 MiB |
 
 </details>
 
